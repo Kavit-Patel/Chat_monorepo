@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
 
   // Specific logic for the root path (main page)
   // Redirect to login if trying to access the main page without a token
-  if (!token && pathname === "/") {
+  if (!token && pathname === "/dashboard") {
     // Adjust the URL to your login page
     return NextResponse.redirect(new URL("/login", request.url));
   }

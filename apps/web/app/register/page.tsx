@@ -1,8 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../store/store";
+import { addNewUser } from "../store/user/userApi";
+import { useRouter } from "next/navigation";
 
 const page = () => {
+  const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+  const { createdStatus } = useSelector((state: RootState) => state.user);
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -17,7 +24,17 @@ const page = () => {
     if (photo) {
       formData.append("photo", photo);
     }
+    dispatch(addNewUser(formData));
+    setName("");
+    setEmail("");
+    setPassword("");
+    setPhoto(null);
   };
+  useEffect(() => {
+    if (createdStatus === "success") {
+      router.push("/");
+    }
+  }, [createdStatus]);
 
   return (
     <div className="w-full h-screen flex justify-center bg-gradient-to-tr from-orange-100 to-green-300">

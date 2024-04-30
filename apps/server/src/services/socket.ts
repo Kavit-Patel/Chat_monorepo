@@ -1,24 +1,36 @@
 import { Server, Socket } from "socket.io";
 export interface Ionline {
-  key: string;
-  value: string;
+  socketId: string;
+  user: string;
 }
 export interface Imessages {
-  socketId: string;
+  sender: string;
+  receiver?: string;
   message: string;
 }
 export interface Iroom {
   roomId: string;
   roomCreator: string;
-  messages?: Imessages[];
+  messages?: Imessages[]; //optional
 }
-const online: Ionline[] = [];
+let online: Ionline[] = [];
 const rooms: Iroom[] = [];
 
+const broadcastOnlineUsers = (io: Server) => {
+  const onlineWithUserName = online.filter((user) => user.user.length > 0);
+  io.emit("online users", onlineWithUserName);
+};
+const broadcastChatRooms = (io: Server) => {
+  io.emit("chat rooms", rooms);
+};
+
 const checkUserExists = (socket: string) =>
-  online.find((socketId) => socketId.key === socket);
+  online.find((socketId) => socketId.socketId === socket);
 const checkRoomExists = (newRoomId: string) =>
   rooms.find((roomId) => roomId.roomId === newRoomId);
+const getUserNameBySocketId = (socket: string) => {
+  return online.find((user) => user.socketId === socket)?.user;
+};
 export const SocketService = () => {
   const io = new Server({
     cors: {
@@ -29,29 +41,56 @@ export const SocketService = () => {
   io.on("connect", (socket: Socket) => {
     console.log(`Init Socket Listner, New Socket Connected at ${socket.id}`);
     if (!checkUserExists(socket.id)) {
-      online.push({ key: socket.id, value: "" });
+      online.push({ socketId: socket.id, user: "" });
     }
-    socket.on("messaging", (msg: string) => {
-      // console.log("msg", msg);
-      // console.log(socket.id + " says " + msg);
-      io.emit("msgCommunicate", { socketId: socket.id, message: msg });
+    //seeting username with socket id whenever user log in
+    socket.on("socketUser", ({ socketId, user }) => {
+      console.log("first", socketId, user);
+      if (user && socketId) {
+        online = online.map((element) => {
+          const matchSocketId = element.socketId === socketId;
+          if (matchSocketId) {
+            return { ...element, user };
+          }
+          return element;
+        });
+      }
+      console.log("firsts", online);
+      broadcastOnlineUsers(io);
     });
-    socket.on("create private room", (roomId) => {
+    //broadcasting online users
+    broadcastOnlineUsers(io);
+    //broadcasting chat rooms
+    broadcastChatRooms(io);
+    //listening to public messaging event
+    socket.on("publicEvent", ({ user, message }) => {
+      io.emit("publicMessaging", { sender: user, message });
+    });
+    socket.on("createPrivateRoom", (roomId) => {
       if (!checkRoomExists(roomId)) {
         rooms.push({ roomId: roomId, roomCreator: socket.id });
+        broadcastChatRooms(io);
       }
-      socket.emit("chat rooms", rooms);
     });
-    socket.on("private room message", (privateObject) => {
-      socket.to(privateObject.currentRoom).emit("private messaging", {
-        socketId: privateObject.socketId.current,
+    socket.on("joinRoom", ({ user, roomId }) => {
+      socket.join(roomId);
+    });
+    socket.on("privateRoomEvent", (privateObject) => {
+      io.to(privateObject.room).emit("privateMessaging", {
+        sender: privateObject.sender,
         message: privateObject.message,
+        room: privateObject.room,
       });
     });
     socket.on("disconnect", () => {
       const disconnectedSocketId = socket.id;
-      const index = online.findIndex((idx) => idx.key === disconnectedSocketId);
-      online.splice(index, 1);
+      const index = online.findIndex(
+        (idx) => idx.socketId === disconnectedSocketId
+      );
+      if (index !== -1) {
+        online.splice(index, 1);
+        broadcastOnlineUsers(io);
+      }
       console.log(`user ${disconnectedSocketId}  disconnected`);
       console.log(`After Disconnection Online Users`, online);
     });

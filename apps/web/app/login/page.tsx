@@ -1,13 +1,30 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../store/store";
+import { useRouter } from "next/navigation";
+import { cookieAutoLogin, loginUser } from "../store/user/userApi";
 
 const page = () => {
+  const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+  const { loginStatus } = useSelector((state: RootState) => state.user);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    dispatch(loginUser({ email, password }));
   };
+  useEffect(() => {
+    dispatch(cookieAutoLogin());
+  }, []);
+  useEffect(() => {
+    if (loginStatus === "success") {
+      router.push("/");
+    }
+  }, [loginStatus]);
+
   return (
     <div className="w-full h-screen flex justify-center bg-gradient-to-tr from-orange-100 to-green-300">
       <div className="w-[50rem]   flex justify-center mt-24">
