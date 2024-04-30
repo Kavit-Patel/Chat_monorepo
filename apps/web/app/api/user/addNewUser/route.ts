@@ -6,13 +6,22 @@ import userModel from "../../../../models/userModel";
 import { writeFile } from "fs/promises";
 
 await ConnectDB();
-export const POST = async (req: { formData: () => any } | NextRequest) => {
+export const POST = async (req: NextRequest | Request) => {
   try {
-    const data = await req.formData();
-    const img = data.get("photo");
+    const data = req instanceof Request ? await req.formData() : undefined;
+    if (!data)
+      return NextResponse.json(
+        { success: false, message: "Provide All details" },
+        { status: 403 }
+      );
+    let img: File | null = null;
+    const imgEntry = data.get("photo");
     const name = data.get("name");
     const email = data.get("email");
     const password = data.get("password");
+    if (imgEntry instanceof File) {
+      img = imgEntry;
+    }
     if (!name || !email || !password)
       return NextResponse.json(
         { success: false, message: "Provide All details" },
@@ -33,7 +42,7 @@ export const POST = async (req: { formData: () => any } | NextRequest) => {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password.toString(), 10);
     const newUser = await userModel.create({
       name,
       email,
@@ -56,7 +65,7 @@ export const POST = async (req: { formData: () => any } | NextRequest) => {
       {
         status: 201,
         headers: {
-          "Set-Cookie": `chat_next=${token};Path=/;Secure;HttpOnly:SameSite=Strickt;Max-Age=3600000`,
+          "Set-Cookie": `chat_next=${token};Path=/;Secure;HttpOnly:SameSite=Strick;Max-Age=3600000`,
         },
       }
     );

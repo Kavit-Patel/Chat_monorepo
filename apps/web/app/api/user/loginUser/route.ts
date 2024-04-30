@@ -42,7 +42,7 @@ export const POST = async (req: NextRequest) => {
       {
         status: 200,
         headers: {
-          "Set-Cookie": `chat_next=${token};Path=/;Secure;HttpOnly:SameSite=Strickt;Max-Age=3600000`,
+          "Set-Cookie": `chat_next=${token};Path=/;Secure;HttpOnly:SameSite=Strick;Max-Age=3600000`,
         },
       }
     );

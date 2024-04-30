@@ -8,7 +8,7 @@ export interface Iuser {
   password: string;
   photo?: boolean;
 }
-interface initType {
+export interface initType {
   user: Iuser | null;
   createdStatus: "idle" | "pending" | "success" | "error";
   loginStatus: "idle" | "pending" | "success" | "error";
