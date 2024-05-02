@@ -6,7 +6,7 @@ import userModel from "../../../../models/userModel";
 import { writeFile } from "fs/promises";
 
 await ConnectDB();
-export const POST = async (req: { formData: () => any }) => {
+export const POST = async (req: NextRequest) => {
   try {
     console.log("called");
     const data = req instanceof Request ? await req.formData() : undefined;
