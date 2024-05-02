@@ -12,8 +12,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String },
   photo: {
     type: String,
-    default:
-      "https://worldburn.org/_userfiles/pages/images/about/exec/person.png",
+    default: "/uploads/person.png",
   },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },

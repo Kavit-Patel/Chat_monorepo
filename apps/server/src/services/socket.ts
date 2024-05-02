@@ -50,18 +50,37 @@ export const SocketService = () => {
         online = online.map((element) => {
           const matchSocketId = element.socketId === socketId;
           if (matchSocketId) {
+            console.log("m", matchSocketId);
             return { ...element, user };
           }
           return element;
         });
       }
-      console.log("firsts", online);
       broadcastOnlineUsers(io);
     });
     //broadcasting online users
     broadcastOnlineUsers(io);
     //broadcasting chat rooms
     broadcastChatRooms(io);
+    //listening to private messaging event
+    socket.on("privateEvent", ({ senderId, receiverId, message }) => {
+      const receiverSocket = online.find(
+        (user) => user.user === receiverId
+      )?.socketId;
+      console.log(receiverSocket, senderId, receiverId, message);
+      if (receiverSocket) {
+        socket.emit("privateMessaging", {
+          senderId,
+          receiverId,
+          message,
+        });
+        io.to(receiverSocket).emit("privateMessaging", {
+          senderId,
+          receiverId,
+          message,
+        });
+      }
+    });
     //listening to public messaging event
     socket.on("publicEvent", ({ user, message }) => {
       io.emit("publicMessaging", { sender: user, message });
@@ -76,7 +95,7 @@ export const SocketService = () => {
       socket.join(roomId);
     });
     socket.on("privateRoomEvent", (privateObject) => {
-      io.to(privateObject.room).emit("privateMessaging", {
+      io.to(privateObject.room).emit("privateRoomMessaging", {
         sender: privateObject.sender,
         message: privateObject.message,
         room: privateObject.room,

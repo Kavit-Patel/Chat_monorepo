@@ -7,6 +7,12 @@ interface ApiResponse {
   message: string;
   response: Iuser;
 }
+interface ApiResponseFetchAllUsers {
+  success: boolean;
+  message: string;
+  response: Iuser[];
+}
+
 interface IloginDataObj {
   email: string;
   password: string;
@@ -92,5 +98,29 @@ export const cookieAutoLogin = createAsyncThunk<
     console.log(errMessage);
     toast.error(errMessage);
     rejectWithValue(errMessage);
+  }
+});
+
+export const getAllUsers = createAsyncThunk<
+  ApiResponseFetchAllUsers,
+  string,
+  { rejectValue: string }
+>("fetch/users", async (userId, { rejectWithValue }) => {
+  try {
+    const req = await fetch(`/api/user/getAllUsers/${userId}`, {
+      credentials: "include",
+    });
+    const data = await req.json();
+    if (data.success) {
+      toast.success(data.message);
+      return data;
+    } else {
+      throw new Error(data.message);
+    }
+  } catch (error) {
+    const errMessage =
+      error instanceof Error ? error.message : "Fetching Users Failed !";
+    toast.error(errMessage);
+    return rejectWithValue(errMessage);
   }
 });

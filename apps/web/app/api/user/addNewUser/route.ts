@@ -6,27 +6,29 @@ import userModel from "../../../../models/userModel";
 import { writeFile } from "fs/promises";
 
 await ConnectDB();
-export const POST = async (req: NextRequest | Request) => {
+export const POST = async (req: { formData: () => any }) => {
   try {
+    console.log("called");
     const data = req instanceof Request ? await req.formData() : undefined;
     if (!data)
       return NextResponse.json(
         { success: false, message: "Provide All details" },
         { status: 403 }
       );
-    let img: File | null = null;
-    const imgEntry = data.get("photo");
+    // let img: File | null = null;
+    const img = data.get("photo") as File | null;
     const name = data.get("name");
     const email = data.get("email");
     const password = data.get("password");
-    if (imgEntry instanceof File) {
-      img = imgEntry;
-    }
+    // if (imgEntry instanceof File) {
+    //   img = imgEntry;
+    // }
     if (!name || !email || !password)
       return NextResponse.json(
         { success: false, message: "Provide All details" },
         { status: 403 }
       );
+    console.log("first");
     if (img) {
       const byteData = await img.arrayBuffer();
       const buffer = Buffer.from(byteData);
@@ -43,13 +45,12 @@ export const POST = async (req: NextRequest | Request) => {
     }
 
     const hashedPassword = await bcrypt.hash(password.toString(), 10);
+    console.log("second");
     const newUser = await userModel.create({
       name,
       email,
       password: hashedPassword,
-      photo: img
-        ? `./public/uploads/${img.lastModified + "_" + img.name}`
-        : undefined,
+      photo: img ? `/uploads/${img.lastModified + "_" + img.name}` : undefined,
     });
     const token = jwt.sign(
       { userId: newUser._id },

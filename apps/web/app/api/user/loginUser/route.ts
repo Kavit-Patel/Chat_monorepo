@@ -8,6 +8,7 @@ await ConnectDB();
 export const POST = async (req: NextRequest) => {
   try {
     const { email, password } = await req.json();
+    console.log("Login Attempt !", email, password);
     if (!email || !password)
       return NextResponse.json(
         { success: false, message: "Please Provide all details !" },
