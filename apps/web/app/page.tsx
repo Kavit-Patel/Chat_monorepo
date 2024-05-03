@@ -301,7 +301,7 @@ const page = () => {
               <Image
                 className="rounded-full"
                 src={user?.photo ? user.photo : ""}
-                alt={user?.photo ? user?.name : ""}
+                alt="/uploads/person.jpg"
                 width={32}
                 height={32}
               />
@@ -365,7 +365,7 @@ const page = () => {
                       <Image
                         className={`rounded-full `}
                         src={users.photo ? users.photo : ""}
-                        alt={users.name}
+                        alt="/uploads/person.jpg"
                         width={32}
                         height={32}
                       />
@@ -412,7 +412,7 @@ const page = () => {
                       <Image
                         className="rounded-full"
                         src={msg.senderId.photo}
-                        alt="{msg.sender.name}"
+                        alt="/uploads/person.jpg"
                         width={32}
                         height={32}
                       />
