@@ -6,6 +6,7 @@ export interface Iconversation {
   senderId: string | userType;
   receiverId: string | userType;
   message: string;
+  read: boolean;
 }
 
 const conversationSchema = new mongoose.Schema(
@@ -21,6 +22,7 @@ const conversationSchema = new mongoose.Schema(
       required: true,
     },
     message: { type: String, required: true },
+    read: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

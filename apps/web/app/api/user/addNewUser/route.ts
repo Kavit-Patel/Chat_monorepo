@@ -30,11 +30,15 @@ export const POST = async (req: NextRequest) => {
       );
     console.log("first");
     if (img) {
-      const byteData = await img.arrayBuffer();
-      const buffer = Buffer.from(byteData);
-      const imgName = img.lastModified + "_" + img.name;
-      const path = `./public/uploads/${imgName}`;
-      await writeFile(path, buffer);
+      try {
+        const byteData = await img.arrayBuffer();
+        const buffer = Buffer.from(byteData);
+        const imgName = img.lastModified + "_" + img.name;
+        const path = `./public/uploads/${imgName}`;
+        await writeFile(path, buffer);
+      } catch (error) {
+        console.log("imgError", error);
+      }
     }
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
@@ -71,6 +75,7 @@ export const POST = async (req: NextRequest) => {
       }
     );
   } catch (error) {
+    console.log(error);
     return NextResponse.json(
       { success: false, message: "Error Creating NewUser !" },
       { status: 500 }

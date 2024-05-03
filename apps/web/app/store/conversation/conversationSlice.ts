@@ -5,17 +5,24 @@ import { Iuser } from "../user/userSlice";
 export interface Imessages {
   _id?: string;
   senderId: Iuser;
+  receiverId?: Iuser;
   message: string;
-  receiverId: Iuser;
+  read: boolean;
   room?: string | null;
+}
+export interface Iprivate {
+  myId: string;
+  yourId: string;
 }
 export interface IinitialState {
   messages: Imessages[];
+  privateMessagingPartner: Iprivate[];
   msgCreatedStatus: "idle" | "success" | "pending" | "error";
   msgFetchedStatus: "idle" | "success" | "pending" | "error";
 }
 const initialState: IinitialState = {
   messages: [],
+  privateMessagingPartner: [],
   msgCreatedStatus: "idle",
   msgFetchedStatus: "idle",
 };
@@ -24,7 +31,16 @@ const conversationSlice = createSlice({
   initialState,
   reducers: {
     messaging: (state, action) => {
+      console.log("msging", action.payload);
       state.messages = [...state.messages, action.payload];
+    },
+    setPrivateMessagingPartner: (state, action) => {
+      state.privateMessagingPartner = action.payload;
+    },
+    updateMessagesReadState: (state, action) => {
+      console.log("upmsging", action.payload);
+
+      state.messages = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -40,8 +56,8 @@ const conversationSlice = createSlice({
         state.msgFetchedStatus = "pending";
       })
       .addCase(addNewConversation.fulfilled, (state, action) => {
-        console.log("int", action.payload);
-        state.messages = [...state.messages, action.payload.response];
+        // console.log("int", action.payload);
+        // state.messages = [...state.messages, action.payload.response];
         state.msgCreatedStatus = "success";
       })
       .addCase(addNewConversation.rejected, (state) => {
@@ -52,5 +68,9 @@ const conversationSlice = createSlice({
       });
   },
 });
-export const { messaging } = conversationSlice.actions;
+export const {
+  messaging,
+  updateMessagesReadState,
+  setPrivateMessagingPartner,
+} = conversationSlice.actions;
 export default conversationSlice.reducer;

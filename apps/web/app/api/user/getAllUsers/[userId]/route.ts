@@ -19,7 +19,7 @@ export const GET = async (
         { status: 403 }
       );
     const users = await userModel.find({});
-    console.log(users);
+    // console.log(users);
     return NextResponse.json(
       {
         success: true,

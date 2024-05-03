@@ -12,12 +12,18 @@ import { FaSearch } from "react-icons/fa";
 import Image from "next/image";
 import { BiCheck, BiCheckDouble } from "react-icons/bi";
 import { IoMdSend } from "react-icons/io";
-import { messaging } from "./store/conversation/conversationSlice";
+import {
+  messaging,
+  setPrivateMessagingPartner,
+  updateMessagesReadState,
+} from "./store/conversation/conversationSlice";
 import {
   addNewConversation,
   getUserConversation,
 } from "./store/conversation/conversationApi";
-import { Iuser } from "./store/user/userSlice";
+import { Iuser, setUserOnlineStatus } from "./store/user/userSlice";
+import { getUserFromId } from "../lib/getUserFromId";
+import { Console } from "console";
 
 const page = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -27,7 +33,9 @@ const page = () => {
   const { user, allUsers, fetchAllUsersStatus, loginStatus } = useSelector(
     (state: RootState) => state.user
   );
-  const { messages } = useSelector((state: RootState) => state.conversation);
+  const { messages, privateMessagingPartner } = useSelector(
+    (state: RootState) => state.conversation
+  );
   const [openMenu, setOpenMenu] = useState<{
     mainMenu: boolean;
     actionMenu: boolean;
@@ -41,6 +49,7 @@ const page = () => {
   const check = useRef<boolean>(false);
   const [searchFriends, setSearchFriends] = useState<string>("");
   const [friend, setFriend] = useState<string>("");
+  const messageEndref = useRef<HTMLDivElement | null>(null);
   // useEffect(() => {
   //   if (user) {
   //     const conv = async () => {
@@ -65,7 +74,7 @@ const page = () => {
   }, []);
   useEffect(() => {
     if (user && loginStatus === "success") {
-      console.log("clicked");
+      // console.log("clicked");
       //   //Emmiting event after Attach CurrentUser with socketId
       socket.current?.emit("socketUser", {
         socketId: socket.current.id,
@@ -83,7 +92,7 @@ const page = () => {
     // socket.current = io("https://chat-monorepo-niq2.onrender.com");
     if (!socket.current) {
       socket.current = io(process.env.SOCKET_SERVER || "http://localhost:5000");
-      console.log(socket.current);
+      // console.log(socket.current);
       //getting current socket id
       socket.current.on("connect", () => {
         if (socket.current) {
@@ -118,16 +127,117 @@ const page = () => {
     socket.current?.on("privateRoomMessaging", (obj) => {
       dispatch(messaging(obj));
     });
-    socket.current?.on(
-      "privateMessaging",
-      ({ senderId, receiverId, message }) => {
-        console.log(senderId, receiverId, message);
-        dispatch(
-          messaging({ sender: senderId, receiver: receiverId, message })
-        );
+    const privateMessagingListner = ({
+      senderId,
+      receiverId,
+      read,
+      message,
+    }: {
+      senderId: string;
+      receiverId: string;
+      read: boolean;
+      message: string;
+    }) => {
+      const populatedSender = getUserFromId(senderId, allUsers);
+      const populatedReceiver = getUserFromId(receiverId, allUsers);
+      // console.log("Running Count DOWN");
+      dispatch(
+        messaging({
+          _id: Math.floor(Math.random() * 100000),
+          senderId: populatedSender,
+          receiverId: populatedReceiver,
+          read: read,
+          message,
+        })
+      );
+    };
+    if (allUsers.length > 0) {
+      socket.current?.on("privateMessaging", privateMessagingListner);
+    }
+    return () => {
+      if (allUsers.length > 0) {
+        socket.current?.off("privateMessaging", privateMessagingListner);
       }
+    };
+  }, [dispatch, allUsers]);
+  useEffect(() => {
+    console.log("READCONFIRM USEEFFECT");
+    const readConfirmListner = (
+      arr: {
+        yourId: string;
+        myId: string;
+      }[]
+    ) => {
+      console.log("READCONFIRM LISTENED AT CLIENT", arr);
+      if (arr.length > 0) {
+        dispatch(setPrivateMessagingPartner(arr));
+      }
+      // const messagesWithUpdateReadState = messages.map(
+      //   (msg) => {
+      //     console.log(msg.senderId._id, yourId, msg.receiverId?._id, myId);
+      //     if (msg.senderId._id === yourId && msg.receiverId?._id === myId) {
+      //       return { ...msg, read: true };
+      //     }
+      //     return msg;
+      //   }
+      //   // msg.senderId._id === yourId && msg.receiverId?._id === myId
+      //   //   ? { ...msg, read: true }
+      //   //   : msg
+      // );
+      // console.log(
+      //   privateMessagingPartner,
+      //   "msgwrs",
+      //   messagesWithUpdateReadState
+      // );
+      // if (messagesWithUpdateReadState.length > 0) {
+      //   dispatch(updateMessagesReadState(messagesWithUpdateReadState));
+      // }
+    };
+    socket.current?.on("readConfirm", readConfirmListner);
+    return () => {
+      socket.current?.off("readConfirm", readConfirmListner);
+    };
+  }, [friend]);
+
+  useEffect(() => {
+    console.log("READSTATE USEEFFECT");
+    const messagesWithUpdateReadState = messages.map(
+      (msg) => {
+        const matched = privateMessagingPartner.some(
+          (el) =>
+            el.myId === msg.receiverId?._id && el.yourId === msg.senderId._id
+        );
+        console.log("matchedmsg", matched);
+        if (matched) {
+          return { ...msg, read: true };
+        }
+        return msg;
+      }
+      // msg.senderId._id === yourId && msg.receiverId?._id === myId
+      //   ? { ...msg, read: true }
+      //   : msg
     );
-  }, [dispatch]);
+    console.log(privateMessagingPartner, "msgwrs", messagesWithUpdateReadState);
+    if (messagesWithUpdateReadState.length > 0) {
+      dispatch(updateMessagesReadState(messagesWithUpdateReadState));
+    }
+  }, [privateMessagingPartner]);
+
+  useEffect(() => {
+    console.log("ONLINE");
+    const messagesWithUpdateOnlineState = allUsers.map((user) => {
+      const online = onlineUsers.some((usr) => usr.user === user._id);
+      if (online) {
+        return { ...user, online: true };
+      }
+      return user;
+    });
+    dispatch(setUserOnlineStatus(messagesWithUpdateOnlineState));
+  }, [onlineUsers, friend]);
+
+  useEffect(() => {
+    messageEndref.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
   // const handleMessageSend = () => {
   //   if (socket.current && user) {
   //     if (currentRoom) {
@@ -168,8 +278,17 @@ const page = () => {
       setMessage("");
     }
   };
+  const handleFriendClick = (yourId: string | undefined) => {
+    if (yourId && user?._id) {
+      setFriend(yourId);
+      dispatch(getUserConversation(user._id));
+      // dispatch(setPrivateMessagingPartner({ myId: user._id, yourId }));
+      // console.log("READ EMMITED FROM CLIENT..");
+      socket.current?.emit("readMsg", { yourId, myId: user._id });
+    }
+  };
 
-  console.log(messages);
+  // console.log(messages, onlineUsers, user);
 
   return (
     <div className="w-full h-screen flex justify-center items-center">
@@ -187,6 +306,7 @@ const page = () => {
                 height={32}
               />
               <span>{user?.name}</span>
+              <span>{user?._id}</span>
             </h2>
             <div className="flex-1 flex justify-end">
               <BsThreeDotsVertical
@@ -238,21 +358,23 @@ const page = () => {
                 .map((users) => (
                   <div
                     key={users._id}
-                    onClick={() => {
-                      if (users._id && user?._id) {
-                        setFriend(users._id);
-                        dispatch(getUserConversation(user._id));
-                      }
-                    }}
+                    onClick={() => handleFriendClick(users._id)}
                     className={`${friend === users._id ? "bg-white" : ""} transition-all hover:bg-white cursor-pointer flex gap-4 p-2 items-center  rounded-lg`}
                   >
-                    <Image
-                      className="rounded-full"
-                      src={users.photo ? users.photo : ""}
-                      alt={users.name}
-                      width={32}
-                      height={32}
-                    />
+                    <div className="relative">
+                      <Image
+                        className={`rounded-full `}
+                        src={users.photo ? users.photo : ""}
+                        alt={users.name}
+                        width={32}
+                        height={32}
+                      />
+                      {onlineUsers.some(
+                        (onlineuser) => onlineuser.user === users._id
+                      ) && (
+                        <div className="w-3 h-3 bg-green-700 rounded-full border-2 border-white absolute -top-1 -right-1"></div>
+                      )}
+                    </div>
                     <div className=" flex flex-col" key={users._id}>
                       <div className="font-semibold">{users.name}</div>
                       <div className="text-xs">last conversation........</div>
@@ -274,17 +396,18 @@ const page = () => {
           {friend.length > 0 ? (
             <div className="w-full h-full flex flex-col gap-3">
               <h2 className=" w-full h-[15%]">MessageBox</h2>
-              <div className="w-full h-[80%] flex flex-col gap-4 border-2 overflow-y-auto">
+              <div className="w-full h-[80%] flex flex-col gap-4 border-2 overflow-y-auto p-2">
                 {messages
                   .filter(
                     (msg) =>
-                      msg.receiverId._id === friend ||
-                      msg.senderId._id === friend
+                      msg?.receiverId?._id === friend ||
+                      msg?.senderId?._id === friend
                   )
                   .map((msg) => (
                     <div
                       key={msg._id}
-                      className={`${msg.senderId._id === user?._id ? "bg-[#72808B] text-white ml-auto rounded-tl-2xl rounded-bl-2xl" : "bg-[#E8ECEF] mr-auto rounded-tr-2xl rounded-bl-2xl"} flex gap-3 items-center  min-w-[10%] max-w-[60%] p-2 rounded-br-2xl `}
+                      ref={messageEndref}
+                      className={`${msg.senderId._id === user?._id ? "ml-auto rounded-tl-2xl rounded-bl-2xl" : " mr-auto rounded-tr-2xl rounded-bl-2xl"} bg-[#EBF3E9] flex gap-3 items-center  min-w-[10%] max-w-[60%] p-2 rounded-br-2xl `}
                     >
                       <Image
                         className="rounded-full"
@@ -295,10 +418,20 @@ const page = () => {
                       />
                       <div className="flex flex-col gap-3">
                         <div className="">{msg.message}</div>
-                        <div className="text-xs text-right flex items-center justify-end">
+                        <div className="text-xs text-right flex items-center justify-end gap-1">
                           <span>8:99</span>
                           <span>
-                            <BiCheck />
+                            {msg.senderId._id === user?._id ? (
+                              msg.read ? (
+                                <span className="text-green-800">
+                                  <BiCheckDouble />
+                                </span>
+                              ) : (
+                                <BiCheck />
+                              )
+                            ) : (
+                              ""
+                            )}
                           </span>
                         </div>
                       </div>

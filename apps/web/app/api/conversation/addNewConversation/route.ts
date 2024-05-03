@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ConnectDB } from "../../../../lib/ConnectDB/connection";
 import { conversationModel } from "../../../../models/conversationModel";
+import { roomModel } from "../../../../models/roomModel";
 
 ConnectDB();
 export const POST = async (req: NextRequest) => {
   try {
-    const { senderId, receiverId, message } = await req.json();
+    const { senderId, receiverId, message, ...rest } = await req.json();
     console.log(senderId, receiverId, message);
     if (!senderId || !receiverId || !message)
       return NextResponse.json(
@@ -26,6 +27,22 @@ export const POST = async (req: NextRequest) => {
       .findById(newConversation._id)
       .populate("senderId")
       .populate("receiverId");
+    //adding conversation id to room if its room conversation
+    if (rest.roomId) {
+      const room = await roomModel.findByIdAndUpdate(rest.roomId, {
+        $push: { messages: newConversation._id },
+      });
+      if (!room)
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "New Conversation dosn't Added to room since room Id doesn't exists !",
+            response: newConversationWithPopulate,
+          },
+          { status: 403 }
+        );
+    }
 
     return NextResponse.json(
       {

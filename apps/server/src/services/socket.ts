@@ -4,17 +4,26 @@ export interface Ionline {
   user: string;
 }
 export interface Imessages {
-  sender: string;
-  receiver?: string;
+  _id?: string;
+  senderId: string;
+  receiverId?: string;
   message: string;
+  read: boolean;
+  room?: string | null;
 }
 export interface Iroom {
-  roomId: string;
+  _id?: string;
+  roomName: string;
   roomCreator: string;
   messages?: Imessages[]; //optional
 }
+export interface Iprivate {
+  myId: string;
+  yourId: string;
+}
 let online: Ionline[] = [];
-const rooms: Iroom[] = [];
+let rooms: Iroom[] = [];
+let privateMessagingPartner: Iprivate[] = [];
 
 const broadcastOnlineUsers = (io: Server) => {
   const onlineWithUserName = online.filter((user) => user.user.length > 0);
@@ -26,8 +35,8 @@ const broadcastChatRooms = (io: Server) => {
 
 const checkUserExists = (socket: string) =>
   online.find((socketId) => socketId.socketId === socket);
-const checkRoomExists = (newRoomId: string) =>
-  rooms.find((roomId) => roomId.roomId === newRoomId);
+const checkRoomExists = (creator: string) =>
+  rooms.find((room) => room.roomCreator === creator);
 const getUserNameBySocketId = (socket: string) => {
   return online.find((user) => user.socketId === socket)?.user;
 };
@@ -45,12 +54,12 @@ export const SocketService = () => {
     }
     //seeting username with socket id whenever user log in
     socket.on("socketUser", ({ socketId, user }) => {
-      console.log("first", socketId, user);
+      // console.log("first", socketId, user);
       if (user && socketId) {
         online = online.map((element) => {
           const matchSocketId = element.socketId === socketId;
           if (matchSocketId) {
-            console.log("m", matchSocketId);
+            // console.log("m", matchSocketId);
             return { ...element, user };
           }
           return element;
@@ -67,27 +76,55 @@ export const SocketService = () => {
       const receiverSocket = online.find(
         (user) => user.user === receiverId
       )?.socketId;
-      console.log(receiverSocket, senderId, receiverId, message);
+      const partnerListening = privateMessagingPartner.some(
+        (el) => el.myId === receiverId && el.yourId === senderId
+      );
+      console.log(
+        receiverSocket,
+        senderId,
+        receiverId,
+        message,
+        partnerListening
+      );
+      socket.emit("privateMessaging", {
+        senderId,
+        receiverId,
+        read: partnerListening ? true : false,
+        message,
+      });
       if (receiverSocket) {
-        socket.emit("privateMessaging", {
-          senderId,
-          receiverId,
-          message,
-        });
         io.to(receiverSocket).emit("privateMessaging", {
           senderId,
           receiverId,
+          read: partnerListening ? true : false,
           message,
         });
       }
+    });
+    // message read event
+    socket.on("readMsg", ({ yourId, myId }) => {
+      const matchExists = privateMessagingPartner.find(
+        (obj) => obj.myId === myId && obj.yourId === yourId
+      );
+
+      console.log(matchExists, "mexist");
+      if (!matchExists) {
+        privateMessagingPartner.push({ yourId, myId });
+      }
+      privateMessagingPartner = privateMessagingPartner.map((el) =>
+        el.myId === myId ? { ...el, yourId } : el
+      );
+
+      console.log(privateMessagingPartner, "newprivatempadded");
+      io.emit("readConfirm", privateMessagingPartner);
     });
     //listening to public messaging event
     socket.on("publicEvent", ({ user, message }) => {
       io.emit("publicMessaging", { sender: user, message });
     });
-    socket.on("createPrivateRoom", (roomId) => {
-      if (!checkRoomExists(roomId)) {
-        rooms.push({ roomId: roomId, roomCreator: socket.id });
+    socket.on("createPrivateRoom", ({ roomId, roomName, creator }) => {
+      if (!checkRoomExists(creator)) {
+        rooms.push({ _id: roomId, roomName: roomName, roomCreator: creator });
         broadcastChatRooms(io);
       }
     });
@@ -96,7 +133,7 @@ export const SocketService = () => {
     });
     socket.on("privateRoomEvent", (privateObject) => {
       io.to(privateObject.room).emit("privateRoomMessaging", {
-        sender: privateObject.sender,
+        senderId: privateObject.sender,
         message: privateObject.message,
         room: privateObject.room,
       });
@@ -107,14 +144,20 @@ export const SocketService = () => {
         (idx) => idx.socketId === disconnectedSocketId
       );
       if (index !== -1) {
+        const userId = online[index].user;
+        const ppIndex = privateMessagingPartner.findIndex(
+          (idx) => idx.myId === userId
+        );
+        privateMessagingPartner.splice(ppIndex, 1);
         online.splice(index, 1);
         broadcastOnlineUsers(io);
       }
-      console.log(`user ${disconnectedSocketId}  disconnected`);
-      console.log(`After Disconnection Online Users`, online);
+      // console.log(`user ${disconnectedSocketId}  disconnected`);
+      // console.log(`After Disconnection Online Users`, online);
     });
     console.log("onlineUsers", online);
     console.log("rooms", rooms);
+    console.log("privateMessagingPartner", privateMessagingPartner);
   });
   console.log("Init SocketService...");
   return io;

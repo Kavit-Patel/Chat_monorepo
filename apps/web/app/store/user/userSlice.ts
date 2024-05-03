@@ -7,6 +7,7 @@ export interface Iuser {
   email: string;
   password: string;
   photo: string;
+  online?: boolean;
 }
 export interface initType {
   user: Iuser | null;
@@ -27,9 +28,9 @@ const userSlice = createSlice({
   name: "user",
   initialState,
   reducers: {
-    // setUser: (state, action) => {
-    //   state.user = action.payload;
-    // },
+    setUserOnlineStatus: (state, action) => {
+      state.allUsers = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -79,4 +80,4 @@ const userSlice = createSlice({
   },
 });
 export default userSlice.reducer;
-// export const {  } = userSlice.actions;
+export const { setUserOnlineStatus } = userSlice.actions;
