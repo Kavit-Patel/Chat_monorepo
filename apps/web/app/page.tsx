@@ -24,8 +24,10 @@ import {
 import { Iuser, setUserOnlineStatus } from "./store/user/userSlice";
 import { getUserFromId } from "../lib/getUserFromId";
 import { Console } from "console";
+import { useRouter } from "next/navigation";
 
 const page = () => {
+  const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { rooms, onlineUsers } = useSelector(
     (state: RootState) => state.socket
@@ -70,6 +72,9 @@ const page = () => {
     if (!autoCheck.current) {
       dispatch(cookieAutoLogin());
       autoCheck.current = true;
+    }
+    if (loginStatus !== "idle" && loginStatus !== "success") {
+      router.push("/login");
     }
   }, []);
   useEffect(() => {
