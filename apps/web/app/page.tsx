@@ -300,8 +300,8 @@ const page = () => {
             <h2 className="font-semibold md:text-xl flex-1 flex items-center gap-4">
               <Image
                 className="rounded-full"
-                src={user?.photo ? user.photo : ""}
-                alt="/uploads/person.jpg"
+                src={user?.photo ? user.photo : "/uploads/person.png"}
+                alt="/uploads/person.png"
                 width={32}
                 height={32}
               />
@@ -364,8 +364,8 @@ const page = () => {
                     <div className="relative">
                       <Image
                         className={`rounded-full `}
-                        src={users.photo ? users.photo : ""}
-                        alt="/uploads/person.jpg"
+                        src={users.photo ? users.photo : "/uploads/person.png"}
+                        alt="/uploads/person.png"
                         width={32}
                         height={32}
                       />
@@ -411,8 +411,8 @@ const page = () => {
                     >
                       <Image
                         className="rounded-full"
-                        src={msg.senderId.photo}
-                        alt="/uploads/person.jpg"
+                        src={msg.senderId.photo || "/uploads/person.png"}
+                        alt="/uploads/person.png"
                         width={32}
                         height={32}
                       />

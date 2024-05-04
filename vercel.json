@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "projects": [
+    {
+      "name": "web",
+      "builds": [
+        {
+          "src": "apps/web/package.json",
+          "use": "@vercel/next"
+        }
+      ],
+      "routes": [{ "src": "/(.*)", "dest": "apps/web/$1" }]
+    },
+    {
+      "name": "docs",
+      "builds": [
+        {
+          "src": "apps/docs/package.json",
+          "use": "@vercel/static"
+        }
+      ],
+      "routes": [{ "src": "/docs/(.*)", "dest": "apps/docs/$1" }]
+    },
+    {
+      "name": "server",
+      "builds": [
+        {
+          "src": "apps/server/package.json",
+          "use": "@vercel/node",
+          "config": { "includeFiles": ["dist/**"] }
+        }
+      ],
+      "routes": [{ "src": "/server/(.*)", "dest": "apps/server/$1" }]
+    }
+  ],
+  "routes": [
+    { "src": "/docs/(.*)", "dest": "/apps/docs/$1" },
+    { "src": "/server/(.*)", "dest": "/apps/server/$1" },
+    { "src": "/(.*)", "dest": "/apps/web/$1" }
+  ]
+}
