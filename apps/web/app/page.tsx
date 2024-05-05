@@ -4,13 +4,13 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "./store/store";
 import { Socket, io } from "socket.io-client";
-import { creatRoom, setOnlineUsers } from "./store/socket/socketSlice";
+import { setOnlineUsers } from "./store/socket/socketSlice";
 import { cookieAutoLogin, getAllUsers } from "./store/user/userApi";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import Link from "next/link";
 import { FaSearch } from "react-icons/fa";
 import Image from "next/image";
-import { BiCheck, BiCheckDouble } from "react-icons/bi";
+import { BiCheck, BiCheckDouble, BiPlusCircle } from "react-icons/bi";
 import { IoMdSend } from "react-icons/io";
 import {
   messaging,
@@ -23,25 +23,41 @@ import {
 } from "./store/conversation/conversationApi";
 import { Iuser, setUserOnlineStatus } from "./store/user/userSlice";
 import { getUserFromId } from "../lib/getUserFromId";
-import { Console } from "console";
 import { useRouter } from "next/navigation";
+import { addNewRoom, getUserRooms, joinRoom } from "./store/room/roomApi";
 
 const page = () => {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
-  const { rooms, onlineUsers } = useSelector(
-    (state: RootState) => state.socket
-  );
+  const { onlineUsers } = useSelector((state: RootState) => state.socket);
   const { user, allUsers, fetchAllUsersStatus, loginStatus } = useSelector(
     (state: RootState) => state.user
   );
   const { messages, privateMessagingPartner } = useSelector(
     (state: RootState) => state.conversation
   );
+  const { rooms, roomsFetchedStatus, roomCreatedStatus } = useSelector(
+    (state: RootState) => state.room
+  );
   const [openMenu, setOpenMenu] = useState<{
+    friendsDisplay: boolean;
+    roomsDisplay: boolean;
+    newRoom: boolean;
+    roomMenu: boolean;
+    addUsersToRoomMenu: boolean;
+    roomMembersDisplay: boolean;
     mainMenu: boolean;
     actionMenu: boolean;
-  }>({ mainMenu: false, actionMenu: false });
+  }>({
+    friendsDisplay: true,
+    roomsDisplay: false,
+    newRoom: false,
+    roomMenu: false,
+    addUsersToRoomMenu: false,
+    roomMembersDisplay: false,
+    mainMenu: false,
+    actionMenu: false,
+  });
   const autoCheck = useRef<boolean>(false);
   const socket = useRef<Socket | null>(null);
   const socketId = useRef<string>();
@@ -50,8 +66,11 @@ const page = () => {
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
   const check = useRef<boolean>(false);
   const [searchFriends, setSearchFriends] = useState<string>("");
-  const [friend, setFriend] = useState<string>("");
+  const [searchRoom, setSearchRoom] = useState<string>("");
+  const [friendOrRoom, setFriendOrRoom] = useState<string>("");
+  // const [room, setRoom] = useState<string>("");
   const messageEndref = useRef<HTMLDivElement | null>(null);
+
   // useEffect(() => {
   //   if (user) {
   //     const conv = async () => {
@@ -90,13 +109,16 @@ const page = () => {
   useEffect(() => {
     if (user && user._id) {
       dispatch(getAllUsers(user._id));
+      dispatch(getUserRooms(user._id));
     }
   }, [user]);
 
   useEffect(() => {
     // socket.current = io("https://chat-monorepo-niq2.onrender.com");
     if (!socket.current) {
-      socket.current = io(process.env.SOCKET_SERVER || "http://localhost:5000");
+      socket.current = io(
+        process.env.NEXT_PUBLIC_SOCKET_SERVER || "http://localhost:5000"
+      );
       // console.log(socket.current);
       //getting current socket id
       socket.current.on("connect", () => {
@@ -115,9 +137,9 @@ const page = () => {
   }, []);
   useEffect(() => {
     //Listning chat rooms event
-    socket.current?.on("chat rooms", (chatRooms) => {
-      dispatch(creatRoom(chatRooms));
-    });
+    // socket.current?.on("chat rooms", (chatRooms) => {
+    //   dispatch(creatRoom(chatRooms));
+    // });
     //Listning online users event
     socket.current?.on("online users", (ou) => {
       dispatch(setOnlineUsers(ou));
@@ -166,14 +188,14 @@ const page = () => {
     };
   }, [dispatch, allUsers]);
   useEffect(() => {
-    console.log("READCONFIRM USEEFFECT");
+    // console.log("READCONFIRM USEEFFECT");
     const readConfirmListner = (
       arr: {
         yourId: string;
         myId: string;
       }[]
     ) => {
-      console.log("READCONFIRM LISTENED AT CLIENT", arr);
+      // console.log("READCONFIRM LISTENED AT CLIENT", arr);
       if (arr.length > 0) {
         dispatch(setPrivateMessagingPartner(arr));
       }
@@ -202,17 +224,17 @@ const page = () => {
     return () => {
       socket.current?.off("readConfirm", readConfirmListner);
     };
-  }, [friend]);
+  }, [friendOrRoom]);
 
   useEffect(() => {
-    console.log("READSTATE USEEFFECT");
+    // console.log("READSTATE USEEFFECT");
     const messagesWithUpdateReadState = messages.map(
       (msg) => {
         const matched = privateMessagingPartner.some(
           (el) =>
-            el.myId === msg.receiverId?._id && el.yourId === msg.senderId._id
+            el.myId === msg?.receiverId?._id && el.yourId === msg.senderId._id
         );
-        console.log("matchedmsg", matched);
+        // console.log("matchedmsg", matched);
         if (matched) {
           return { ...msg, read: true };
         }
@@ -222,14 +244,14 @@ const page = () => {
       //   ? { ...msg, read: true }
       //   : msg
     );
-    console.log(privateMessagingPartner, "msgwrs", messagesWithUpdateReadState);
+    // console.log(privateMessagingPartner, "msgwrs", messagesWithUpdateReadState);
     if (messagesWithUpdateReadState.length > 0) {
       dispatch(updateMessagesReadState(messagesWithUpdateReadState));
     }
   }, [privateMessagingPartner]);
 
   useEffect(() => {
-    console.log("ONLINE");
+    // console.log("ONLINE");
     const messagesWithUpdateOnlineState = allUsers.map((user) => {
       const online = onlineUsers.some((usr) => usr.user === user._id);
       if (online) {
@@ -238,7 +260,7 @@ const page = () => {
       return user;
     });
     dispatch(setUserOnlineStatus(messagesWithUpdateOnlineState));
-  }, [onlineUsers, friend]);
+  }, [onlineUsers, friendOrRoom]);
 
   useEffect(() => {
     messageEndref.current?.scrollIntoView({ behavior: "smooth" });
@@ -258,9 +280,18 @@ const page = () => {
   //   }
   // };
   const handleNewRoom = () => {
-    if (socket.current) {
-      socket.current.emit("createPrivateRoom", newRoom);
+    setOpenMenu((prev) => ({
+      ...prev,
+      newRoom: !prev.newRoom,
+      mainMenu: !prev.mainMenu,
+    }));
+    if (newRoom.length > 2 && user?._id) {
+      console.log(newRoom);
+      dispatch(addNewRoom({ userId: user._id, roomName: newRoom }));
     }
+    // if (socket.current) {
+    //   socket.current.emit("createPrivateRoom", newRoom);
+    // }
   };
   const handleRoomJoin = (roomId: string) => {
     setCurrentRoom(roomId);
@@ -275,7 +306,7 @@ const page = () => {
     if (user?._id && socket.current) {
       const conversation = {
         senderId: user._id,
-        receiverId: friend,
+        receiverId: friendOrRoom,
         message: msg,
       };
       socket.current.emit("privateEvent", conversation);
@@ -283,23 +314,23 @@ const page = () => {
       setMessage("");
     }
   };
-  const handleFriendClick = (yourId: string | undefined) => {
+  const handleFriendOrRoomClick = (yourId: string | undefined) => {
     if (yourId && user?._id) {
-      setFriend(yourId);
-      dispatch(getUserConversation(user._id));
+      setFriendOrRoom(yourId);
+      dispatch(getUserConversation({ userId: user._id, roomId: yourId }));
       // dispatch(setPrivateMessagingPartner({ myId: user._id, yourId }));
       // console.log("READ EMMITED FROM CLIENT..");
       socket.current?.emit("readMsg", { yourId, myId: user._id });
     }
   };
 
-  // console.log(messages, onlineUsers, user);
+  console.log(messages, rooms, openMenu.roomMembersDisplay);
 
   return (
     <div className="w-full h-screen flex justify-center items-center">
       <div className="w-[95%] h-[90%] bg-[#E5E5E5] border-2 shadow-2x flex  rounded-2xl">
         <div
-          className={`${friend.length > 0 ? "hidden md:flex" : "flex"} w-full h-full md:w-[35%] px-4 py-10  flex-col gap-3 bg-[#FBFDF6]`}
+          className={`${friendOrRoom.length > 0 ? "hidden md:flex" : "flex"} w-full h-full md:w-[35%] px-4 py-10  flex-col gap-3 bg-[#FBFDF6]`}
         >
           <div className="w-full flex flex-wrap justify-between relative ">
             <h2 className="font-semibold md:text-xl flex-1 flex items-center gap-4">
@@ -324,6 +355,34 @@ const page = () => {
             <div
               className={` ${openMenu.mainMenu ? "block" : "hidden"} absolute top-5 z-20 w-full h-96 flex flex-col items-center py-10 md:text-xl rounded-lg bg-teal-50 mt-3`}
             >
+              <div className="">
+                <button
+                  className={`${!openMenu.newRoom ? "block" : "hidden"} transition-all hover:scale-110 active:scale-95`}
+                  onClick={() =>
+                    setOpenMenu((prev) => ({ ...prev, newRoom: !prev.newRoom }))
+                  }
+                >
+                  CreateNewRoom
+                </button>
+                <div
+                  className={`${openMenu.newRoom ? "block" : "hidden"} flex justify-center items-center gap-2`}
+                >
+                  <input
+                    value={newRoom}
+                    onChange={(e) => setNewRoom(e.target.value)}
+                    type="text"
+                    placeholder="Choose Room Name atleast 3 char..."
+                    className="outline-none px-2 py-1 rounded-md"
+                  />
+                  <button
+                    onClick={() => handleNewRoom()}
+                    className="border px-3 py-1.5 rounded-md transition-all bg-green-300 hover:bg-green-600 active:scale-95"
+                  >
+                    Create
+                  </button>
+                </div>
+              </div>
+
               <Link
                 href="/login"
                 className="transition-all hover:scale-110 active:scale-95"
@@ -337,76 +396,258 @@ const page = () => {
           </div>
           <div className="w-full relative text-xs md:text-lg">
             <input
-              value={searchFriends}
-              onChange={(e) => setSearchFriends(e.target.value)}
+              value={openMenu.friendsDisplay ? searchFriends : searchRoom}
+              onChange={
+                openMenu.friendsDisplay
+                  ? (e) => setSearchFriends(e.target.value)
+                  : (e) => setSearchRoom(e.target.value)
+              }
               className="w-full p-2 rounded-2xl outline-none bg-[#E1ECE1]"
               type="text"
               placeholder="Popular conversa..."
             />
             <FaSearch className="absolute right-3 top-3 text-gray-500" />
           </div>
-          <div className="w-full h-full flex">
-            {fetchAllUsersStatus === "pending" && (
-              <div className="w-full h-full flex justify-center items-center">
-                <div className=" animate-spin w-32 h-32 border-b-2 border-blue-600 rounded-full"></div>
+          <div className="w-full h-full">
+            <div className="flex ">
+              <div
+                onClick={() => {
+                  setSearchRoom("");
+                  setOpenMenu((prev) => ({
+                    ...prev,
+                    friendsDisplay: true,
+                    roomsDisplay: false,
+                  }));
+                }}
+                className={`${openMenu.friendsDisplay ? "border-t-2 border-l-2 border-r-2" : "border-b-2"} flex-1 px-2 p-2 cursor-pointer transition-all active:scale-95`}
+              >
+                Your Friends
               </div>
-            )}
-            <div className="w-full flex flex-col  gap-2">
-              {allUsers
-                .filter(
-                  (users) =>
-                    users.name !== user?.name &&
-                    users.name
-                      .toLowerCase()
-                      .includes(searchFriends.toLowerCase())
-                )
-                .map((users) => (
-                  <div
-                    key={users._id}
-                    onClick={() => handleFriendClick(users._id)}
-                    className={`${friend === users._id ? "bg-white" : ""} transition-all hover:bg-white cursor-pointer flex gap-4 p-2 items-center  rounded-lg`}
-                  >
-                    <div className="relative">
-                      <Image
-                        className={`rounded-full `}
-                        src={users.photo ? users.photo : "/uploads/person.png"}
-                        alt="/uploads/person.png"
-                        width={32}
-                        height={32}
-                      />
-                      {onlineUsers.some(
-                        (onlineuser) => onlineuser.user === users._id
-                      ) && (
-                        <div className="w-3 h-3 bg-green-700 rounded-full border-2 border-white absolute -top-1 -right-1"></div>
-                      )}
-                    </div>
-                    <div className=" flex flex-col" key={users._id}>
-                      <div className="font-semibold">{users.name}</div>
-                      <div className="text-xs">last conversation........</div>
-                    </div>
-                    <div className="text-sm ml-auto">
-                      <div className="">08:39</div>
-                      <div className="flex justify-end ">
-                        {check ? <BiCheckDouble /> : <BiCheck />}
+              <div
+                onClick={() => {
+                  setSearchFriends("");
+                  setOpenMenu((prev) => ({
+                    ...prev,
+                    friendsDisplay: false,
+                    roomsDisplay: true,
+                  }));
+                }}
+                className={`${openMenu.roomsDisplay ? "border-l-2 border-r-2 border-t-2" : "border-b-2"} flex-1 px-2 p-2 cursor-pointer transition-all active:scale-95`}
+              >
+                Rooms
+              </div>
+            </div>
+            {/* //all Users Display */}
+            <div
+              className={`${openMenu.friendsDisplay ? "flex" : "hidden"} w-full h-full`}
+            >
+              {fetchAllUsersStatus === "pending" && (
+                <div className="w-full h-full flex justify-center items-center">
+                  <div className=" animate-spin w-32 h-32 border-b-2 border-blue-600 rounded-full"></div>
+                </div>
+              )}
+              <div className="w-full flex flex-col  gap-2 border-b-2 border-l-2 border-r-2">
+                {allUsers
+                  .filter(
+                    (users) =>
+                      users.name !== user?.name &&
+                      users.name
+                        .toLowerCase()
+                        .includes(searchFriends.toLowerCase())
+                  )
+                  .map((users) => (
+                    <div
+                      key={users._id}
+                      onClick={() => handleFriendOrRoomClick(users._id)}
+                      className={`${friendOrRoom === users._id ? "bg-white" : ""} transition-all hover:bg-white cursor-pointer flex gap-4 p-2 items-center  rounded-lg`}
+                    >
+                      <div className="relative">
+                        <Image
+                          className={`rounded-full `}
+                          src={
+                            users.photo ? users.photo : "/uploads/person.png"
+                          }
+                          alt="/uploads/person.png"
+                          width={32}
+                          height={32}
+                        />
+                        {onlineUsers.some(
+                          (onlineuser) => onlineuser.user === users._id
+                        ) && (
+                          <div className="w-3 h-3 bg-green-700 rounded-full border-2 border-white absolute -top-1 -right-1"></div>
+                        )}
+                      </div>
+                      <div className=" flex flex-col" key={users._id}>
+                        <div className="font-semibold">{users.name}</div>
+                        <div className="text-xs">last conversation........</div>
+                      </div>
+                      <div className="text-sm ml-auto">
+                        <div className="">08:39</div>
+                        <div className="flex justify-end ">
+                          {check ? <BiCheckDouble /> : <BiCheck />}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+              </div>
+            </div>
+            {/* //user room Display */}
+            <div
+              className={`${openMenu.roomsDisplay ? "flex" : "hidden"} w-full h-full`}
+            >
+              {roomsFetchedStatus === "pending" && (
+                <div className="w-full h-full flex justify-center items-center">
+                  <div className=" animate-spin w-32 h-32 border-b-2 border-blue-600 rounded-full"></div>
+                </div>
+              )}
+              <div className="w-full flex flex-col  gap-2 border-b-2 border-l-2 border-r-2 pt-2">
+                {rooms
+                  .filter((room) =>
+                    room.roomName
+                      .toLowerCase()
+                      .includes(searchRoom.toLowerCase())
+                  )
+                  .map((room) => (
+                    <div
+                      key={room._id}
+                      onClick={() => handleFriendOrRoomClick(room._id)}
+                      className="flex justify-center font-semibold"
+                    >
+                      <div
+                        className={`${friendOrRoom === room._id ? "bg-white" : ""} relative transition-all hover:bg-white  w-full h-full flex gap-4 p-2 justify-between items-center  rounded-lg`}
+                      >
+                        <span>{room.roomName}</span>
+                        <span
+                          onClick={() =>
+                            setOpenMenu((prev) => ({
+                              ...prev,
+                              roomMenu: !prev.roomMenu,
+                            }))
+                          }
+                          className=" cursor-pointer"
+                        >
+                          <BsThreeDotsVertical />
+                        </span>
+                        <div
+                          className={`${openMenu.roomMenu ? "flex" : "hidden"} w-full h-full absolute top-4 p-4 flex-col gap-3 items-center`}
+                        >
+                          <div className="w-full h-fit">
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenu((prev) => ({
+                                  ...prev,
+                                  addUsersToRoomMenu: !prev.addUsersToRoomMenu,
+                                }));
+                              }}
+                              className="text-center cursor-pointer"
+                            >
+                              Add To Group
+                            </div>
+                            <div
+                              className={`${openMenu.addUsersToRoomMenu ? "flex" : "hidden"} z-50 w-full py-4 bg-white flex-col gap-2 items-center h-24 overflow-y-auto `}
+                            >
+                              {allUsers
+                                .filter(
+                                  (users) =>
+                                    !room.roomUsers.some(
+                                      (el) => el._id === users._id
+                                    )
+                                )
+                                .map((users) => (
+                                  <div className="w-full text-center transition-all hover:bg-slate-100 active:scale-95 flex justify-center gap-8">
+                                    <div className="w-[40%] flex justify-start gap-2">
+                                      <div className="w-6 h-6">
+                                        <Image
+                                          className="rounded-full object-cover"
+                                          src={
+                                            users.photo || "/uploads/person.png"
+                                          }
+                                          alt={users.name.slice(0, 1)}
+                                          width={24}
+                                          height={24}
+                                        />
+                                      </div>
+                                      <span className="">{users.name}</span>
+                                    </div>
+                                    <span
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (room._id && users._id)
+                                          dispatch(
+                                            joinRoom({
+                                              roomId: room._id,
+                                              userId: users._id,
+                                            })
+                                          );
+                                      }}
+                                    >
+                                      <BiPlusCircle className="rounded-full cursor-pointer text-white bg-green-600 transition-all hover:bg-green-800 active:scale-95" />
+                                    </span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenu((prev) => ({
+                                ...prev,
+                                roomMembersDisplay: !prev.roomMembersDisplay,
+                              }));
+                            }}
+                            className="cursor-pointer"
+                          >
+                            See Group Members
+                          </div>
+                          <div
+                            className={`${openMenu.roomMembersDisplay ? "flex" : "hidden"} flex-col gap-2 justify-center items-center w-full min-h-24 overflow-y-auto`}
+                          >
+                            {room.roomUsers.length > 0 &&
+                              room.roomUsers.map((roomuser) => (
+                                <div className="w-[50%] flex justify-start gap-4 ">
+                                  <div className="relative">
+                                    <div className=" w-6 h-6">
+                                      <Image
+                                        className="rounded-full object-cover"
+                                        src={
+                                          roomuser?.photo ||
+                                          "/uploads/person.png"
+                                        }
+                                        alt={roomuser?.name?.slice(0, 1)}
+                                        width={24}
+                                        height={24}
+                                      />
+                                    </div>
+
+                                    {/* {roomuser.online && ( */}
+                                    <div className="  w-2.5 h-2.5 bg-green-800 rounded-full border-2 border-white absolute top-0 -right-2"></div>
+                                    {/* // )} */}
+                                  </div>
+                                  <span>{roomuser.name}</span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </div>
           </div>
         </div>
         <div
-          className={`${friend.length > 0 ? "w-full" : "hidden"} md:flex md:w-[65%] h-full bg-[#fefbfb]  px-4 py-10 flex-col gap-3`}
+          className={`${friendOrRoom.length > 0 ? "w-full" : "hidden"} md:flex md:w-[65%] h-full bg-[#fefbfb]  px-4 py-10 flex-col gap-3`}
         >
-          {friend.length > 0 ? (
+          {friendOrRoom.length > 0 ? (
             <div className="w-full h-full flex flex-col gap-3">
               <h2 className=" w-full h-[15%]">MessageBox</h2>
               <div className="w-full h-[80%] flex flex-col gap-4 border-2 overflow-y-auto p-2">
                 {messages
                   .filter(
                     (msg) =>
-                      msg?.receiverId?._id === friend ||
-                      msg?.senderId?._id === friend
+                      msg?.receiverId?._id === friendOrRoom ||
+                      msg?.senderId?._id === friendOrRoom
                   )
                   .map((msg) => (
                     <div

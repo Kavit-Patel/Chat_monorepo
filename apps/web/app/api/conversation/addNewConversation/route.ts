@@ -6,7 +6,7 @@ import { roomModel } from "../../../../models/roomModel";
 ConnectDB();
 export const POST = async (req: NextRequest) => {
   try {
-    const { senderId, receiverId, message, ...rest } = await req.json();
+    const { senderId, receiverId, message } = await req.json();
     console.log(senderId, receiverId, message);
     if (!senderId || !receiverId || !message)
       return NextResponse.json(
@@ -23,13 +23,14 @@ export const POST = async (req: NextRequest) => {
         { success: false, message: "New Conversation dosn't created !" },
         { status: 403 }
       );
+    const roomMessaging = await roomModel.findById(receiverId);
     const newConversationWithPopulate = await conversationModel
       .findById(newConversation._id)
       .populate("senderId")
       .populate("receiverId");
     //adding conversation id to room if its room conversation
-    if (rest.roomId) {
-      const room = await roomModel.findByIdAndUpdate(rest.roomId, {
+    if (roomMessaging) {
+      const room = await roomModel.findByIdAndUpdate(receiverId, {
         $push: { messages: newConversation._id },
       });
       if (!room)

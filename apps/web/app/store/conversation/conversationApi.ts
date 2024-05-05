@@ -45,11 +45,13 @@ export const addNewConversation = createAsyncThunk<
 
 export const getUserConversation = createAsyncThunk<
   ApiResponseUserConversation,
-  string,
+  { userId: string; roomId: string },
   { rejectValue: string }
->("fetch/conversation", async (userId, { rejectWithValue }) => {
+>("fetch/conversation", async ({ userId, roomId }, { rejectWithValue }) => {
   try {
-    const req = await fetch(`/api/conversation/getUserConversation/${userId}`);
+    const req = await fetch(
+      `/api/conversation/getUserConversation/${userId}/${roomId}`
+    );
     const data = await req.json();
     if (data.success) {
       toast.success(data.message);

@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 export interface Iroom {
+  _id?: string;
   roomId: string;
   roomCreator: string;
 }
@@ -11,11 +12,11 @@ export interface Ionline {
 
 export interface Isocket {
   onlineUsers: Ionline[];
-  rooms: Iroom[];
+  // rooms: Iroom[];
 }
 const initialState: Isocket = {
   onlineUsers: [],
-  rooms: [],
+  // rooms: [],
 };
 const socketSlice = createSlice({
   name: "socket",
@@ -25,10 +26,10 @@ const socketSlice = createSlice({
       state.onlineUsers = action.payload;
     },
 
-    creatRoom: (state, action) => {
-      state.rooms = action.payload;
-    },
+    // creatRoom: (state, action) => {
+    //   state.rooms = action.payload;
+    // },
   },
 });
 export default socketSlice.reducer;
-export const { setOnlineUsers, creatRoom } = socketSlice.actions;
+export const { setOnlineUsers } = socketSlice.actions;

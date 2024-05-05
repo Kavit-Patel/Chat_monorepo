@@ -1,14 +1,15 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { addNewConversation, getUserConversation } from "./conversationApi";
 import { Iuser } from "../user/userSlice";
+import { Iroom } from "../socket/socketSlice";
 
 export interface Imessages {
   _id?: string;
   senderId: Iuser;
-  receiverId?: Iuser;
+  receiverId: Iuser | Iroom;
   message: string;
   read: boolean;
-  room?: string | null;
+  // room?: string | null;
 }
 export interface Iprivate {
   myId: string;

@@ -1,10 +1,11 @@
 import mongoose, { Model } from "mongoose";
 import { userType } from "./userModel";
+import { Iroom } from "./roomModel";
 
 export interface Iconversation {
   id?: string;
   senderId: string | userType;
-  receiverId: string | userType;
+  receiverId: string | userType | Iroom;
   message: string;
   read: boolean;
 }

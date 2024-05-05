@@ -1,13 +1,16 @@
 import mongoose, { Model } from "mongoose";
 
 export interface Iroom {
-  messages: mongoose.Types.ObjectId;
+  _id?: string;
+  messages: mongoose.Types.ObjectId[];
+  roomUsers: mongoose.Types.ObjectId[];
   roomName: string;
   creator: mongoose.Types.ObjectId;
 }
 const roomSchema = new mongoose.Schema(
   {
     messages: [{ type: mongoose.Schema.Types.ObjectId, ref: "Conversations" }],
+    roomUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Users" }],
     roomName: { type: String, required: true },
     creator: {
       type: mongoose.Schema.Types.ObjectId,
