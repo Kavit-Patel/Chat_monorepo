@@ -58,6 +58,7 @@ const page = () => {
     mainMenu: false,
     actionMenu: false,
   });
+  const roomIdref = useRef<string>("");
   const autoCheck = useRef<boolean>(false);
   const socket = useRef<Socket | null>(null);
   const socketId = useRef<string>();
@@ -342,7 +343,6 @@ const page = () => {
                 height={32}
               />
               <span>{user?.name}</span>
-              <span>{user?._id}</span>
             </h2>
             <div className="flex-1 flex justify-end">
               <BsThreeDotsVertical
@@ -493,14 +493,14 @@ const page = () => {
             </div>
             {/* //user room Display */}
             <div
-              className={`${openMenu.roomsDisplay ? "flex" : "hidden"} w-full h-full`}
+              className={`${openMenu.roomsDisplay ? "flex" : "hidden"} w-full h-full flex flex-col items-center`}
             >
               {roomsFetchedStatus === "pending" && (
                 <div className="w-full h-full flex justify-center items-center">
                   <div className=" animate-spin w-32 h-32 border-b-2 border-blue-600 rounded-full"></div>
                 </div>
               )}
-              <div className="w-full flex flex-col  gap-2 border-b-2 border-l-2 border-r-2 pt-2">
+              <div className="w-full h-full flex flex-col  gap-2 border-b-2 border-l-2 border-r-2 pt-2">
                 {rooms
                   .filter((room) =>
                     room.roomName
@@ -511,122 +511,127 @@ const page = () => {
                     <div
                       key={room._id}
                       onClick={() => handleFriendOrRoomClick(room._id)}
-                      className="flex justify-center font-semibold"
+                      className="w-full flex justify-center font-semibold"
                     >
                       <div
-                        className={`${friendOrRoom === room._id ? "bg-white" : ""} relative transition-all hover:bg-white  w-full h-full flex gap-4 p-2 justify-between items-center  rounded-lg`}
+                        className={`${friendOrRoom === room._id ? "bg-white" : ""} transition-all hover:bg-white w-full  p-2  rounded-lg`}
                       >
-                        <span>{room.roomName}</span>
-                        <span
-                          onClick={() =>
+                        <div
+                          onClick={(e) => {
+                            roomIdref.current = room._id || "";
                             setOpenMenu((prev) => ({
                               ...prev,
                               roomMenu: !prev.roomMenu,
-                            }))
-                          }
-                          className=" cursor-pointer"
+                            }));
+                          }}
+                          className="relative  cursor-pointer w-full flex justify-between"
                         >
-                          <BsThreeDotsVertical />
-                        </span>
-                        <div
-                          className={`${openMenu.roomMenu ? "flex" : "hidden"} w-full h-full absolute top-4 p-4 flex-col gap-3 items-center`}
-                        >
-                          <div className="w-full h-fit">
+                          <span>{room.roomName}</span>
+                          <span className="w-12 text-center">
+                            <BsThreeDotsVertical className="w-full text-center" />
+                          </span>
+                          <div
+                            className={`${openMenu.roomMenu && roomIdref.current === room._id ? "flex" : "hidden"} w-full h-80 absolute top-6 rounded-xl pl-3 z-40 bg-[#f6f8f6] border-2 py-4 flex-col gap-3`}
+                          >
+                            <div className="w-full">
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenu((prev) => ({
+                                    ...prev,
+                                    addUsersToRoomMenu:
+                                      !prev.addUsersToRoomMenu,
+                                  }));
+                                }}
+                                className=" cursor-pointer"
+                              >
+                                Add To Group
+                              </div>
+                              <div
+                                className={`${openMenu.addUsersToRoomMenu ? "flex" : "hidden"} w-full py-4 bg-white flex-col gap-2 items-center overflow-y-auto `}
+                              >
+                                {allUsers
+                                  .filter(
+                                    (users) =>
+                                      !room.roomUsers.some(
+                                        (el) => el._id === users._id
+                                      )
+                                  )
+                                  .map((users) => (
+                                    <div className="w-full text-center transition-all hover:bg-slate-100 active:scale-95 flex justify-center items-center py-1">
+                                      <div className="w-[40%] flex justify-start gap-2">
+                                        <div className="w-6 h-6 text-center">
+                                          <Image
+                                            className="rounded-full object-cover"
+                                            src={
+                                              users.photo ||
+                                              "/uploads/person.png"
+                                            }
+                                            alt={users.name.slice(0, 1)}
+                                            width={24}
+                                            height={24}
+                                          />
+                                        </div>
+                                        <span className="">{users.name}</span>
+                                      </div>
+                                      <span
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (room._id && users._id)
+                                            dispatch(
+                                              joinRoom({
+                                                roomId: room._id,
+                                                userId: users._id,
+                                              })
+                                            );
+                                        }}
+                                      >
+                                        <BiPlusCircle className="rounded-full cursor-pointer text-white bg-green-600 transition-all hover:bg-green-800 active:scale-95" />
+                                      </span>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
                             <div
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setOpenMenu((prev) => ({
                                   ...prev,
-                                  addUsersToRoomMenu: !prev.addUsersToRoomMenu,
+                                  roomMembersDisplay: !prev.roomMembersDisplay,
                                 }));
                               }}
-                              className="text-center cursor-pointer"
+                              className="cursor-pointer"
                             >
-                              Add To Group
+                              See Group Members
                             </div>
                             <div
-                              className={`${openMenu.addUsersToRoomMenu ? "flex" : "hidden"} z-50 w-full py-4 bg-white flex-col gap-2 items-center h-24 overflow-y-auto `}
+                              className={`${openMenu.roomMembersDisplay ? "flex" : "hidden"} flex-col gap-2 justify-center items-center w-full py-4 h-32 overflow-y-auto`}
                             >
-                              {allUsers
-                                .filter(
-                                  (users) =>
-                                    !room.roomUsers.some(
-                                      (el) => el._id === users._id
-                                    )
-                                )
-                                .map((users) => (
-                                  <div className="w-full text-center transition-all hover:bg-slate-100 active:scale-95 flex justify-center gap-8">
-                                    <div className="w-[40%] flex justify-start gap-2">
-                                      <div className="w-6 h-6">
+                              {room.roomUsers.length > 0 &&
+                                room.roomUsers.map((roomuser) => (
+                                  <div className="w-[50%] flex justify-start gap-4 ">
+                                    <div className="relative">
+                                      <div className=" w-6 h-6 text-center">
                                         <Image
                                           className="rounded-full object-cover"
                                           src={
-                                            users.photo || "/uploads/person.png"
+                                            roomuser?.photo ||
+                                            "/uploads/person.png"
                                           }
-                                          alt={users.name.slice(0, 1)}
+                                          alt={roomuser?.name?.slice(0, 1)}
                                           width={24}
                                           height={24}
                                         />
                                       </div>
-                                      <span className="">{users.name}</span>
+
+                                      {/* {roomuser.online && ( */}
+                                      <div className="  w-2.5 h-2.5 bg-green-800 rounded-full border-2 border-white absolute top-0 -right-2"></div>
+                                      {/* // )} */}
                                     </div>
-                                    <span
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (room._id && users._id)
-                                          dispatch(
-                                            joinRoom({
-                                              roomId: room._id,
-                                              userId: users._id,
-                                            })
-                                          );
-                                      }}
-                                    >
-                                      <BiPlusCircle className="rounded-full cursor-pointer text-white bg-green-600 transition-all hover:bg-green-800 active:scale-95" />
-                                    </span>
+                                    <span>{roomuser.name}</span>
                                   </div>
                                 ))}
                             </div>
-                          </div>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenu((prev) => ({
-                                ...prev,
-                                roomMembersDisplay: !prev.roomMembersDisplay,
-                              }));
-                            }}
-                            className="cursor-pointer"
-                          >
-                            See Group Members
-                          </div>
-                          <div
-                            className={`${openMenu.roomMembersDisplay ? "flex" : "hidden"} flex-col gap-2 justify-center items-center w-full min-h-24 overflow-y-auto`}
-                          >
-                            {room.roomUsers.length > 0 &&
-                              room.roomUsers.map((roomuser) => (
-                                <div className="w-[50%] flex justify-start gap-4 ">
-                                  <div className="relative">
-                                    <div className=" w-6 h-6">
-                                      <Image
-                                        className="rounded-full object-cover"
-                                        src={
-                                          roomuser?.photo ||
-                                          "/uploads/person.png"
-                                        }
-                                        alt={roomuser?.name?.slice(0, 1)}
-                                        width={24}
-                                        height={24}
-                                      />
-                                    </div>
-
-                                    {/* {roomuser.online && ( */}
-                                    <div className="  w-2.5 h-2.5 bg-green-800 rounded-full border-2 border-white absolute top-0 -right-2"></div>
-                                    {/* // )} */}
-                                  </div>
-                                  <span>{roomuser.name}</span>
-                                </div>
-                              ))}
                           </div>
                         </div>
                       </div>
@@ -656,7 +661,7 @@ const page = () => {
                       className={`${msg.senderId._id === user?._id ? "ml-auto rounded-tl-2xl rounded-bl-2xl" : " mr-auto rounded-tr-2xl rounded-bl-2xl"} bg-[#EBF3E9] flex gap-3 items-center  min-w-[10%] max-w-[60%] p-2 rounded-br-2xl `}
                     >
                       <Image
-                        className="rounded-full"
+                        className="rounded-full object-cover"
                         src={msg.senderId.photo || "/uploads/person.png"}
                         alt="/uploads/person.png"
                         width={32}

@@ -15,17 +15,24 @@ export const GET = async (
         { status: 403 }
       );
     const room = await roomModel.findById(roomId);
+    const possibleReceiverId = room ? [room._id, userId] : [userId];
+    console.log("pri", possibleReceiverId);
     const updateUserConversation = await conversationModel.updateMany(
       { receiverId: userId },
       { read: room ? false : true }
     );
     const userConversation = await conversationModel
-      .find({ $or: [{ senderId: userId }, { receiverId: userId }] })
+      .find({
+        $or: [
+          { senderId: userId },
+          { receiverId: { $in: possibleReceiverId } },
+        ],
+      })
       .populate("senderId")
       .populate("receiverId");
     // const room = await roomModel.find(userId);
     const finalUserConversation = userConversation.map((el) => {
-      console.log("room", room);
+      // console.log("room", room);
       if (!el.receiverId) {
         if (room) {
           el.receiverId = room;
