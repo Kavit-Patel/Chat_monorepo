@@ -338,7 +338,7 @@ const page = () => {
               <Image
                 className="rounded-full"
                 src={user?.photo ? user.photo : "/uploads/person.png"}
-                alt="/uploads/person.png"
+                alt={user?.name?.slice(0, 1) || "A"}
                 width={32}
                 height={32}
               />
@@ -467,7 +467,7 @@ const page = () => {
                           src={
                             users.photo ? users.photo : "/uploads/person.png"
                           }
-                          alt="/uploads/person.png"
+                          alt={users?.name?.slice(0, 1)}
                           width={32}
                           height={32}
                         />
@@ -548,7 +548,7 @@ const page = () => {
                                 Add To Group
                               </div>
                               <div
-                                className={`${openMenu.addUsersToRoomMenu ? "flex" : "hidden"} w-full py-4 bg-white flex-col gap-2 items-center overflow-y-auto `}
+                                className={`${openMenu.addUsersToRoomMenu ? "flex" : "hidden"} w-full py-2 bg-white flex-col gap-2 items-center overflow-y-auto `}
                               >
                                 {allUsers
                                   .filter(
@@ -605,11 +605,11 @@ const page = () => {
                               See Group Members
                             </div>
                             <div
-                              className={`${openMenu.roomMembersDisplay ? "flex" : "hidden"} flex-col gap-2 justify-center items-center w-full py-4 h-32 overflow-y-auto`}
+                              className={`${openMenu.roomMembersDisplay ? "flex" : "hidden"} flex-col justify-center items-center gap-4 w-full h-36 overflow-y-auto`}
                             >
                               {room.roomUsers.length > 0 &&
                                 room.roomUsers.map((roomuser) => (
-                                  <div className="w-[50%] flex justify-start gap-4 ">
+                                  <div className="w-[50%] flex justify-start gap-2">
                                     <div className="relative">
                                       <div className=" w-6 h-6 text-center">
                                         <Image
@@ -628,7 +628,7 @@ const page = () => {
                                       <div className="  w-2.5 h-2.5 bg-green-800 rounded-full border-2 border-white absolute top-0 -right-2"></div>
                                       {/* // )} */}
                                     </div>
-                                    <span>{roomuser.name}</span>
+                                    <span>{roomuser?.name}</span>
                                   </div>
                                 ))}
                             </div>
@@ -663,7 +663,7 @@ const page = () => {
                       <Image
                         className="rounded-full object-cover"
                         src={msg.senderId.photo || "/uploads/person.png"}
-                        alt="/uploads/person.png"
+                        alt={msg?.senderId?.name?.slice(0, 1) || "A"}
                         width={32}
                         height={32}
                       />
