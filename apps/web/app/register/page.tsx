@@ -38,11 +38,11 @@ const page = () => {
 
   return (
     <div className="w-full h-screen flex justify-center bg-gradient-to-tr from-orange-100 to-green-300">
-      <div className="w-[50rem]   flex justify-center mt-24">
+      <div className="w-[95%] md:w-[50rem]   flex justify-center mt-24">
         <form
           onSubmit={(e) => handleRegistration(e)}
           encType="multipart/form-data"
-          className="w-[50%] bg-gray-50 h-fit flex flex-col gap-4 px-8 py-12 border-2 rounded-lg"
+          className="w-[95%] md:w-[50%] bg-gray-50 h-fit flex flex-col gap-4 px-8 py-12 border-2 rounded-lg"
         >
           <div className="flex justify-center mb-7">
             <h2 className="flex justify-center border-gray-400 text-gray-800 text-2xl border-b-2 pb-2 w-32">

@@ -9,6 +9,7 @@ export interface Imessages {
   receiverId: Iuser | Iroom;
   message: string;
   read: boolean;
+  createdAt: string;
   // room?: string | null;
 }
 export interface Iprivate {

@@ -21,10 +21,11 @@ import {
   addNewConversation,
   getUserConversation,
 } from "./store/conversation/conversationApi";
-import { Iuser, setUserOnlineStatus } from "./store/user/userSlice";
+import { setUserOnlineStatus } from "./store/user/userSlice";
 import { getUserFromId } from "../lib/getUserFromId";
 import { useRouter } from "next/navigation";
 import { addNewRoom, getUserRooms, joinRoom } from "./store/room/roomApi";
+import { getUserLastActivity } from "./helper/getUserLastActivity";
 
 const page = () => {
   const router = useRouter();
@@ -64,30 +65,11 @@ const page = () => {
   const socketId = useRef<string>();
   const [message, setMessage] = useState<string>("");
   const [newRoom, setNewRoom] = useState<string>("");
-  const [currentRoom, setCurrentRoom] = useState<string | null>(null);
-  const check = useRef<boolean>(false);
   const [searchFriends, setSearchFriends] = useState<string>("");
   const [searchRoom, setSearchRoom] = useState<string>("");
   const [friendOrRoom, setFriendOrRoom] = useState<string>("");
-  // const [room, setRoom] = useState<string>("");
   const messageEndref = useRef<HTMLDivElement | null>(null);
 
-  // useEffect(() => {
-  //   if (user) {
-  //     const conv = async () => {
-  //       try {
-  //         const req = await fetch(
-  //           `/api/conversation/getUserConversation/${user._id}`
-  //         );
-  //         const data = await req.json();
-  //         console.log(data);
-  //       } catch (error) {
-  //         console.log(error);
-  //       }
-  //     };
-  //     conv();
-  //   }
-  // }, [user]);
   useEffect(() => {
     if (!autoCheck.current) {
       dispatch(cookieAutoLogin());
@@ -99,8 +81,6 @@ const page = () => {
   }, []);
   useEffect(() => {
     if (user && loginStatus === "success") {
-      // console.log("clicked");
-      //   //Emmiting event after Attach CurrentUser with socketId
       socket.current?.emit("socketUser", {
         socketId: socket.current.id,
         user: user._id,
@@ -111,17 +91,21 @@ const page = () => {
     if (user && user._id) {
       dispatch(getAllUsers(user._id));
       dispatch(getUserRooms(user._id));
+      dispatch(
+        getUserConversation({
+          userId: user._id,
+          roomId: "123456789123456789123456",
+        })
+      );
     }
   }, [user]);
 
   useEffect(() => {
-    // socket.current = io("https://chat-monorepo-niq2.onrender.com");
     if (!socket.current) {
       socket.current = io(
         process.env.NEXT_PUBLIC_SOCKET_SERVER || "http://localhost:5000"
       );
-      // console.log(socket.current);
-      //getting current socket id
+
       socket.current.on("connect", () => {
         if (socket.current) {
           socketId.current = socket.current.id;
@@ -137,34 +121,54 @@ const page = () => {
     };
   }, []);
   useEffect(() => {
-    //Listning chat rooms event
+    // Listning chat rooms event
     // socket.current?.on("chat rooms", (chatRooms) => {
-    //   dispatch(creatRoom(chatRooms));
+    //   console.log("cr", chatRooms);
     // });
     //Listning online users event
     socket.current?.on("online users", (ou) => {
       dispatch(setOnlineUsers(ou));
     });
 
-    socket.current?.on(
-      "publicMessaging",
-      (msgObj: { sender: string; message: string }) => {
-        dispatch(messaging(msgObj));
-      }
-    );
-    socket.current?.on("privateRoomMessaging", (obj) => {
-      dispatch(messaging(obj));
-    });
+    // socket.current?.on(
+    //   "publicMessaging",
+    //   (msgObj: { sender: string; message: string }) => {
+    //     console.log("PUBlic listner Listned..");
+    //     dispatch(messaging(msgObj));
+    //   }
+    // );
+    const privateRoomMessagingListner = (obj: {
+      senderId: string;
+      receiverId: string;
+      message: string;
+      createdAt: string;
+    }) => {
+      const fullSenderObj = allUsers.find(
+        (sender) => sender._id === obj.senderId
+      );
+      const fullReceiverObj = rooms.find((room) => room._id === obj.receiverId);
+      dispatch(
+        messaging({
+          ...obj,
+          senderId: fullSenderObj,
+          receiverId: fullReceiverObj,
+          _id: Math.floor(Math.random() * 1000000),
+        })
+      );
+    };
+
     const privateMessagingListner = ({
       senderId,
       receiverId,
       read,
       message,
+      createdAt,
     }: {
       senderId: string;
       receiverId: string;
       read: boolean;
       message: string;
+      createdAt: string;
     }) => {
       const populatedSender = getUserFromId(senderId, allUsers);
       const populatedReceiver = getUserFromId(receiverId, allUsers);
@@ -176,18 +180,24 @@ const page = () => {
           receiverId: populatedReceiver,
           read: read,
           message,
+          createdAt,
         })
       );
     };
     if (allUsers.length > 0) {
       socket.current?.on("privateMessaging", privateMessagingListner);
+      socket.current?.on("privateRoomMessaging", privateRoomMessagingListner);
     }
     return () => {
       if (allUsers.length > 0) {
         socket.current?.off("privateMessaging", privateMessagingListner);
+        socket.current?.off(
+          "privateRoomMessaging",
+          privateRoomMessagingListner
+        );
       }
     };
-  }, [dispatch, allUsers]);
+  }, [dispatch, allUsers, rooms]);
   useEffect(() => {
     // console.log("READCONFIRM USEEFFECT");
     const readConfirmListner = (
@@ -290,14 +300,28 @@ const page = () => {
       console.log(newRoom);
       dispatch(addNewRoom({ userId: user._id, roomName: newRoom }));
     }
-    // if (socket.current) {
-    //   socket.current.emit("createPrivateRoom", newRoom);
-    // }
   };
-  const handleRoomJoin = (roomId: string) => {
-    setCurrentRoom(roomId);
-    socket.current?.emit("joinRoom", { user: user?.name, roomId });
-  };
+  useEffect(() => {
+    if (
+      (roomCreatedStatus === "success" ||
+        loginStatus === "success" ||
+        roomsFetchedStatus === "success") &&
+      socket.current
+    ) {
+      console.log("insidelive", rooms);
+      socket.current.emit("liveRooms", { roomsArr: rooms });
+      socket.current.on("chat rooms", (chatRooms) => {
+        console.log("cr", chatRooms);
+      });
+    }
+    return () => {
+      socket.current?.off("liveRooms", () => rooms);
+    };
+  }, [roomCreatedStatus, loginStatus, roomsFetchedStatus]);
+  // const handleRoomJoin = (roomId: string) => {
+  //   setCurrentRoom(roomId);
+  //   // socket.current?.emit("joinRoom", { user: user?.name, roomId });
+  // };
 
   const handleDualConversation = (
     e: React.FormEvent<HTMLFormElement>,
@@ -309,8 +333,10 @@ const page = () => {
         senderId: user._id,
         receiverId: friendOrRoom,
         message: msg,
+        createdAt: new Date().toISOString(),
       };
       socket.current.emit("privateEvent", conversation);
+      socket.current.emit("privateRoomEvent", conversation);
       dispatch(addNewConversation(conversation));
       setMessage("");
     }
@@ -322,13 +348,20 @@ const page = () => {
       // dispatch(setPrivateMessagingPartner({ myId: user._id, yourId }));
       // console.log("READ EMMITED FROM CLIENT..");
       socket.current?.emit("readMsg", { yourId, myId: user._id });
+      const roomMembers = rooms
+        .filter((room) => room._id === yourId)
+        .map((members) => members.roomUsers);
+      socket.current?.emit("joinRoom", {
+        roomMembers: roomMembers,
+        roomId: yourId,
+      });
     }
   };
 
   console.log(messages, rooms, openMenu.roomMembersDisplay);
 
   return (
-    <div className="w-full h-screen flex justify-center items-center">
+    <div className="w-full h-[calc(100vh-1rem)] flex justify-center items-center">
       <div className="w-[95%] h-[90%] bg-[#E5E5E5] border-2 shadow-2x flex  rounded-2xl">
         <div
           className={`${friendOrRoom.length > 0 ? "hidden md:flex" : "flex"} w-full h-full md:w-[35%] px-4 py-10  flex-col gap-3 bg-[#FBFDF6]`}
@@ -446,7 +479,7 @@ const page = () => {
                   <div className=" animate-spin w-32 h-32 border-b-2 border-blue-600 rounded-full"></div>
                 </div>
               )}
-              <div className="w-full flex flex-col  gap-2 border-b-2 border-l-2 border-r-2">
+              <div className="w-full h-[98%] flex flex-col  gap-2 border-b-2 border-l-2 border-r-2">
                 {allUsers
                   .filter(
                     (users) =>
@@ -478,13 +511,54 @@ const page = () => {
                         )}
                       </div>
                       <div className=" flex flex-col" key={users._id}>
-                        <div className="font-semibold">{users.name}</div>
-                        <div className="text-xs">last conversation........</div>
+                        <div className="font-semibold ">{users.name}</div>
+                        <div className="text-xs w-[65%]  text-nowrap">
+                          {(() => {
+                            const lastMsg = getUserLastActivity(
+                              messages,
+                              users._id
+                            );
+                            return lastMsg?.message
+                              ? lastMsg.message.slice(0, 20) + "..."
+                              : "";
+                          })()}
+                        </div>
                       </div>
                       <div className="text-sm ml-auto">
-                        <div className="">08:39</div>
+                        <div className="text-xs">
+                          {(() => {
+                            const time = getUserLastActivity(
+                              messages,
+                              users._id
+                            );
+                            return time
+                              ? new Date(time.createdAt).toLocaleTimeString(
+                                  "en-us",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  }
+                                )
+                              : "";
+                          })()}
+                        </div>
                         <div className="flex justify-end ">
-                          {check ? <BiCheckDouble /> : <BiCheck />}
+                          {(() => {
+                            const checked = getUserLastActivity(
+                              messages,
+                              users._id
+                            );
+                            return checked ? (
+                              checked.read ? (
+                                <BiCheckDouble className="text-green-800" />
+                              ) : (
+                                <BiCheck />
+                              )
+                            ) : (
+                              ""
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -516,18 +590,19 @@ const page = () => {
                       <div
                         className={`${friendOrRoom === room._id ? "bg-white" : ""} transition-all hover:bg-white w-full  p-2  rounded-lg`}
                       >
-                        <div
-                          onClick={(e) => {
-                            roomIdref.current = room._id || "";
-                            setOpenMenu((prev) => ({
-                              ...prev,
-                              roomMenu: !prev.roomMenu,
-                            }));
-                          }}
-                          className="relative  cursor-pointer w-full flex justify-between"
-                        >
+                        <div className="relative  cursor-pointer w-full flex justify-between">
                           <span>{room.roomName}</span>
-                          <span className="w-12 text-center">
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              roomIdref.current = room._id || "";
+                              setOpenMenu((prev) => ({
+                                ...prev,
+                                roomMenu: !prev.roomMenu,
+                              }));
+                            }}
+                            className="w-12 text-center"
+                          >
                             <BsThreeDotsVertical className="w-full text-center" />
                           </span>
                           <div
@@ -558,19 +633,30 @@ const page = () => {
                                       )
                                   )
                                   .map((users) => (
-                                    <div className="w-full text-center transition-all hover:bg-slate-100 active:scale-95 flex justify-center items-center py-1">
-                                      <div className="w-[40%] flex justify-start gap-2">
-                                        <div className="w-6 h-6 text-center">
-                                          <Image
-                                            className="rounded-full object-cover"
-                                            src={
-                                              users.photo ||
-                                              "/uploads/person.png"
-                                            }
-                                            alt={users.name.slice(0, 1)}
-                                            width={24}
-                                            height={24}
-                                          />
+                                    <div
+                                      key={users._id}
+                                      className="w-full text-center transition-all hover:bg-slate-100 active:scale-95 flex justify-center items-center py-1"
+                                    >
+                                      <div className="w-[40%] flex justify-start gap-5">
+                                        <div className="relative">
+                                          <div className="w-6 h-6 text-center">
+                                            <Image
+                                              className="rounded-full object-cover"
+                                              src={
+                                                users.photo ||
+                                                "/uploads/person.png"
+                                              }
+                                              alt={users.name.slice(0, 1)}
+                                              width={24}
+                                              height={24}
+                                            />
+                                          </div>
+                                          {onlineUsers.some(
+                                            (online) =>
+                                              online.user === users._id
+                                          ) && (
+                                            <div className="w-2.5 h-2.5 bg-green-800 rounded-full border-2 border-white absolute top-0 -right-2"></div>
+                                          )}
                                         </div>
                                         <span className="">{users.name}</span>
                                       </div>
@@ -609,7 +695,10 @@ const page = () => {
                             >
                               {room.roomUsers.length > 0 &&
                                 room.roomUsers.map((roomuser) => (
-                                  <div className="w-[50%] flex justify-start gap-2">
+                                  <div
+                                    key={roomuser._id}
+                                    className="w-[50%] flex justify-start gap-5"
+                                  >
                                     <div className="relative">
                                       <div className=" w-6 h-6 text-center">
                                         <Image
@@ -624,9 +713,11 @@ const page = () => {
                                         />
                                       </div>
 
-                                      {/* {roomuser.online && ( */}
-                                      <div className="  w-2.5 h-2.5 bg-green-800 rounded-full border-2 border-white absolute top-0 -right-2"></div>
-                                      {/* // )} */}
+                                      {onlineUsers.some(
+                                        (online) => online.user === roomuser._id
+                                      ) && (
+                                        <div className="  w-2.5 h-2.5 bg-green-800 rounded-full border-2 border-white absolute top-0 -right-2"></div>
+                                      )}
                                     </div>
                                     <span>{roomuser?.name}</span>
                                   </div>
@@ -646,8 +737,50 @@ const page = () => {
         >
           {friendOrRoom.length > 0 ? (
             <div className="w-full h-full flex flex-col gap-3">
-              <h2 className=" w-full h-[15%]">MessageBox</h2>
-              <div className="w-full h-[80%] flex flex-col gap-4 border-2 overflow-y-auto p-2">
+              <h2 className=" w-full h-[20%] flex items-center gap-3 ">
+                {(() => {
+                  const receiver = allUsers.find(
+                    (usr) => usr._id === friendOrRoom
+                  );
+                  if (receiver) {
+                    return (
+                      <>
+                        <div className="text-center">
+                          <Image
+                            className="rounded-full"
+                            src={receiver.photo}
+                            alt={receiver.name.slice(0, 1)}
+                            width={32}
+                            height={32}
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <div className="">{receiver.name}</div>
+                          <div className="text-xs">
+                            {onlineUsers.some(
+                              (online) => online.user === receiver._id
+                            )
+                              ? "online"
+                              : `offline`}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  } else {
+                    return (
+                      <div className=" font-sans">
+                        <span>Room :- </span>
+                        {
+                          rooms.find(
+                            (currentRoom) => currentRoom._id === friendOrRoom
+                          )?.roomName
+                        }
+                      </div>
+                    );
+                  }
+                })()}
+              </h2>
+              <div className="w-full h-[75%] flex flex-col gap-4 border-2 overflow-y-auto p-2">
                 {messages
                   .filter(
                     (msg) =>
@@ -670,7 +803,16 @@ const page = () => {
                       <div className="flex flex-col gap-3">
                         <div className="">{msg.message}</div>
                         <div className="text-xs text-right flex items-center justify-end gap-1">
-                          <span>8:99</span>
+                          <span>
+                            {new Date(msg.createdAt).toLocaleTimeString(
+                              "en-us",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              }
+                            )}
+                          </span>
                           <span>
                             {msg.senderId._id === user?._id ? (
                               msg.read ? (

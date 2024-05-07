@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { conversationModel } from "../../../../../../models/conversationModel";
-import { Iuser } from "../../../../../store/user/userSlice";
 import { roomModel } from "../../../../../../models/roomModel";
 
 export const GET = async (
@@ -9,37 +8,81 @@ export const GET = async (
 ) => {
   try {
     const { userId, roomId } = params;
+    console.log(userId, roomId);
     if (!userId)
       return NextResponse.json(
         { success: false, message: "Provide userId !" },
         { status: 403 }
       );
     const room = await roomModel.findById(roomId);
+    console.log("roomfetched");
     const possibleReceiverId = room ? [room._id, userId] : [userId];
-    console.log("pri", possibleReceiverId);
     const updateUserConversation = await conversationModel.updateMany(
       { receiverId: userId },
-      { read: room ? false : true }
+      { read: true }
     );
-    const userConversation = await conversationModel
-      .find({
-        $or: [
-          { senderId: userId },
-          { receiverId: { $in: possibleReceiverId } },
-        ],
-      })
-      .populate("senderId")
-      .populate("receiverId");
-    // const room = await roomModel.find(userId);
-    const finalUserConversation = userConversation.map((el) => {
-      // console.log("room", room);
-      if (!el.receiverId) {
-        if (room) {
-          el.receiverId = room;
+    console.log("first");
+    let userConversation;
+    if (room) {
+      const convIdArr = room.messages;
+      userConversation = await Promise.all(
+        convIdArr.map((convId) =>
+          conversationModel
+            .findById(convId)
+            .populate("senderId")
+            .populate("receiverId")
+            .lean()
+        )
+      );
+      console.log("second");
+      //adding roomId as receiverId since populating receiverId will give null object
+      userConversation = userConversation.map((conv) => {
+        if (conv && !conv.receiverId) {
+          return { ...conv, receiverId: room };
         }
-      }
-      return el;
-    });
+        return conv;
+      });
+    } else {
+      console.log("third");
+      userConversation = await conversationModel
+        .find({
+          $or: [
+            { senderId: userId },
+            { receiverId: { $in: possibleReceiverId } },
+          ],
+        })
+        .populate("senderId")
+        .populate("receiverId");
+    }
+
+    // const receiverIdPromiseArr = userConversation
+    //   .filter((el) => el.receiverId !== roomId)
+    //   .map((ele) => ele.receiverId);
+    // const receiverIdFulfiled = await Promise.all(
+    //   receiverIdPromiseArr.map(async (receiver) =>
+    //     userModel.findById(receiver).lean()
+    //   )
+    // );
+    // console.log(receiverIdFulfiled);
+    // const finalUserConversation = userConversation.map(async (element) => {
+    //   if (element.receiverId.toString() === roomId) {
+    //     return { ...element, receiverId: room };
+    //   } else {
+    //     const el = await userModel.findById(element.receiverId);
+    //     return { ...element, receiverId: el };
+    //   }
+    //   return element;
+    // });
+
+    // const finalUserConversation = userConversation.map((el) => {
+    //   // console.log("room", room);
+    //   if (!el.receiverId) {
+    //     if (room) {
+    //       el.receiverId = room;
+    //     }
+    //   }
+    //   return el;
+    // });
     // console.log("convObj", finalUserConversation);
     // const userConversationWithRead = userConversation.map((msg) => {
     //   if (
@@ -55,7 +98,7 @@ export const GET = async (
       {
         success: true,
         message: "User Conversation fetched successfully !",
-        response: finalUserConversation,
+        response: userConversation,
       },
       { status: 200 }
     );
