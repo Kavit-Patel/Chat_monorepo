@@ -80,13 +80,13 @@ const page = () => {
     }
   }, []);
   useEffect(() => {
-    if (user && loginStatus === "success") {
-      socket.current?.emit("socketUser", {
+    if (socket.current && user && loginStatus === "success") {
+      socket.current.emit("socketUser", {
         socketId: socket.current.id,
         user: user._id,
       });
     }
-  }, [loginStatus]);
+  }, [loginStatus, user, socket.current]);
   useEffect(() => {
     if (user && user._id) {
       dispatch(getAllUsers(user._id));
@@ -102,9 +102,7 @@ const page = () => {
 
   useEffect(() => {
     if (!socket.current) {
-      socket.current = io(
-        process.env.NEXT_PUBLIC_SOCKET_SERVER || "http://localhost:5000"
-      );
+      socket.current = io(process.env.NEXT_PUBLIC_SOCKET_SERVER || "");
 
       socket.current.on("connect", () => {
         if (socket.current) {

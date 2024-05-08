@@ -27,8 +27,8 @@ let rooms: Iroom[] = [];
 let privateMessagingPartner: Iprivate[] = [];
 
 const broadcastOnlineUsers = (io: Server) => {
-  const onlineWithUserName = online.filter((user) => user.user.length > 0);
-  io.emit("online users", onlineWithUserName);
+  // const onlineWithUserName = online.filter((user) => user.user.length > 0);
+  io.emit("online users", online);
 };
 const broadcastChatRooms = (io: Server) => {
   io.emit("chat rooms", rooms);
@@ -60,7 +60,7 @@ export const SocketService = () => {
         online = online.map((element) => {
           const matchSocketId = element.socketId === socketId;
           if (matchSocketId) {
-            // console.log("m", matchSocketId);
+            console.log("m", matchSocketId);
             return { ...element, user };
           }
           return element;
