@@ -79,13 +79,13 @@ const page = () => {
       router.push("/login");
     }
   }, []);
-  useEffect(() => {
-    const socketObj = {
-      socketId: socket.current?.id,
-      user: user?._id,
-    };
-    socket.current?.emit("socketUser", socketObj);
-  }, [loginStatus, user, socket.current]);
+  // useEffect(() => {
+  //   const socketObj = {
+  //     socketId: socket.current?.id,
+  //     user: user?._id,
+  //   };
+  //   socket.current?.emit("socketUser", socketObj);
+  // }, [loginStatus, user, socket.current]);
   useEffect(() => {
     if (user && user._id) {
       dispatch(getAllUsers(user._id));
@@ -104,19 +104,23 @@ const page = () => {
       socket.current = io("https://chat-monorepo-niq2.onrender.com");
 
       socket.current.on("connect", () => {
-        if (socket.current) {
+        if (socket.current && user) {
           socketId.current = socket.current.id;
+          const socketObj = {
+            socketId: socket.current.id,
+            user: user._id,
+          };
+          socket.current?.emit("socketUser", socketObj);
         }
       });
     }
-
     return () => {
       if (socket.current) {
         socket.current.disconnect();
         socket.current = null;
       }
     };
-  }, []);
+  }, [user]);
   useEffect(() => {
     // Listning chat rooms event
     // socket.current?.on("chat rooms", (chatRooms) => {
