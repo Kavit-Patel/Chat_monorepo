@@ -45,7 +45,10 @@ export const SocketService = () => {
   const io = new Server({
     cors: {
       allowedHeaders: ["*"],
-      origin: ["https://chat-monorepo-web-six.vercel.app"],
+      origin: [
+        "https://chat-monorepo-web-six.vercel.app",
+        "http://localhost:3000",
+      ],
       credentials: true,
     },
   });
@@ -56,7 +59,7 @@ export const SocketService = () => {
     }
     //seeting username with socket id whenever user log in
     socket.on("socketUser", ({ socketId, user }) => {
-      // console.log("first", socketId, user);
+      console.log("first", socketId, user);
       if (user && socketId) {
         online = online.map((element) => {
           const matchSocketId = element.socketId === socketId;
