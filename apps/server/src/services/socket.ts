@@ -45,7 +45,8 @@ export const SocketService = () => {
   const io = new Server({
     cors: {
       allowedHeaders: ["*"],
-      origin: "*",
+      origin: ["https://chat-monorepo-web-six.vercel.app"],
+      credentials: true,
     },
   });
   io.on("connect", (socket: Socket) => {
@@ -68,10 +69,7 @@ export const SocketService = () => {
       }
       broadcastOnlineUsers(io);
     });
-    //broadcasting online users
-    broadcastOnlineUsers(io);
-    //broadcasting chat rooms
-    broadcastChatRooms(io);
+
     //listening to private messaging event
     socket.on(
       "privateEvent",
@@ -145,6 +143,10 @@ export const SocketService = () => {
       // socket.join(roomId);
       socket.join(roomId);
     });
+    //broadcasting online users
+    broadcastOnlineUsers(io);
+    //broadcasting chat rooms
+    broadcastChatRooms(io);
     socket.on("privateRoomEvent", (privateObject) => {
       io.to(privateObject.receiverId).emit("privateRoomMessaging", {
         senderId: privateObject.senderId,
