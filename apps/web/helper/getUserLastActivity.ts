@@ -1,4 +1,4 @@
-import { Imessages } from "../store/conversation/conversationSlice";
+import { Imessages } from "../app/store/conversation/conversationSlice";
 
 export const getUserLastActivity = (
   msgArr: Imessages[],

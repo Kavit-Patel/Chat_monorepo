@@ -25,7 +25,7 @@ import { setUserOnlineStatus } from "./store/user/userSlice";
 import { getUserFromId } from "../lib/getUserFromId";
 import { useRouter } from "next/navigation";
 import { addNewRoom, getUserRooms, joinRoom } from "./store/room/roomApi";
-import { getUserLastActivity } from "./helper/getUserLastActivity";
+import { getUserLastActivity } from "../helper/getUserLastActivity";
 
 const page = () => {
   const router = useRouter();
@@ -387,7 +387,7 @@ const page = () => {
               />
             </div>
             <div
-              className={` ${openMenu.mainMenu ? "block" : "hidden"} absolute top-5 z-20 w-full h-96 flex flex-col items-center py-10 md:text-xl rounded-lg bg-teal-50 mt-3`}
+              className={` ${openMenu.mainMenu ? "block" : "hidden"} absolute top-5 z-20 w-full h-96 flex flex-col gap-4 items-center py-10 md:text-xl rounded-lg bg-teal-50 mt-3 `}
             >
               <div className="">
                 <button
@@ -405,12 +405,12 @@ const page = () => {
                     value={newRoom}
                     onChange={(e) => setNewRoom(e.target.value)}
                     type="text"
-                    placeholder="Choose Room Name atleast 3 char..."
-                    className="outline-none px-2 py-1 rounded-md"
+                    placeholder="min 3char RoomName..."
+                    className="w-[60%] outline-none px-2 py-1 rounded-md text-xs md:text-sm"
                   />
                   <button
                     onClick={() => handleNewRoom()}
-                    className="border px-3 py-1.5 rounded-md transition-all bg-green-300 hover:bg-green-600 active:scale-95"
+                    className="w-[30%] border px-2 md:px-3 py-1.5 text-xs md:text-sm rounded-md transition-all bg-green-300 hover:bg-green-600 active:scale-95"
                   >
                     Create
                   </button>
@@ -567,12 +567,45 @@ const page = () => {
               </div>
             </div>
             {/* //user room Display */}
+
             <div
               className={`${openMenu.roomsDisplay ? "flex" : "hidden"} w-full h-full flex flex-col items-center`}
             >
               {roomsFetchedStatus === "pending" && (
                 <div className="w-full h-full flex justify-center items-center">
                   <div className=" animate-spin w-32 h-32 border-b-2 border-blue-600 rounded-full"></div>
+                </div>
+              )}
+              {rooms.length === 0 && (
+                <div className="">
+                  <button
+                    className={`${!openMenu.newRoom ? "block" : "hidden"} transition-all hover:scale-110 active:scale-95`}
+                    onClick={() =>
+                      setOpenMenu((prev) => ({
+                        ...prev,
+                        newRoom: !prev.newRoom,
+                      }))
+                    }
+                  >
+                    CreateNewRoom
+                  </button>
+                  <div
+                    className={`${openMenu.newRoom ? "block" : "hidden"} flex justify-center items-center gap-2`}
+                  >
+                    <input
+                      value={newRoom}
+                      onChange={(e) => setNewRoom(e.target.value)}
+                      type="text"
+                      placeholder="min 3char RoomName..."
+                      className="w-[60%] outline-none px-2 py-1 rounded-md text-xs md:text-sm"
+                    />
+                    <button
+                      onClick={() => handleNewRoom()}
+                      className="w-[30%] border px-2 md:px-3 py-1.5 text-xs md:text-sm rounded-md transition-all bg-green-300 hover:bg-green-600 active:scale-95"
+                    >
+                      Create
+                    </button>
+                  </div>
                 </div>
               )}
               <div className="w-full h-full flex flex-col  gap-2 border-b-2 border-l-2 border-r-2 pt-2">
