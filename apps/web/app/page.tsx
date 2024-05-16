@@ -26,6 +26,7 @@ import { getUserFromId } from "../lib/getUserFromId";
 import { useRouter } from "next/navigation";
 import { addNewRoom, getUserRooms, joinRoom } from "./store/room/roomApi";
 import { getUserLastActivity } from "../helper/getUserLastActivity";
+import { TbArrowBack } from "react-icons/tb";
 
 const page = () => {
   const router = useRouter();
@@ -798,18 +799,32 @@ const page = () => {
                               : `offline`}
                           </div>
                         </div>
+                        <div
+                          onClick={() => setFriendOrRoom("")}
+                          className="ml-auto cursor-pointer "
+                        >
+                          <TbArrowBack className="md:text-xl" />
+                        </div>
                       </>
                     );
                   } else {
                     return (
-                      <div className=" font-sans">
-                        <span>Room :- </span>
-                        {
-                          rooms.find(
-                            (currentRoom) => currentRoom._id === friendOrRoom
-                          )?.roomName
-                        }
-                      </div>
+                      <>
+                        <div className=" font-sans">
+                          <span>Room :- </span>
+                          {
+                            rooms.find(
+                              (currentRoom) => currentRoom._id === friendOrRoom
+                            )?.roomName
+                          }
+                        </div>
+                        <div
+                          onClick={() => setFriendOrRoom("")}
+                          className="ml-auto cursor-pointer"
+                        >
+                          <TbArrowBack className=" md:text-xl" />
+                        </div>
+                      </>
                     );
                   }
                 })()}
