@@ -59,12 +59,10 @@ export const SocketService = () => {
     }
     //seeting username with socket id whenever user log in
     socket.on("socketUser", ({ socketId, user }) => {
-      console.log("first", socketId, user);
       if (user && socketId) {
         online = online.map((element) => {
           const matchSocketId = element.socketId === socketId;
           if (matchSocketId) {
-            console.log("m", matchSocketId);
             return { ...element, user };
           }
           return element;
@@ -83,14 +81,7 @@ export const SocketService = () => {
         const partnerListening = privateMessagingPartner.some(
           (el) => el.myId === receiverId && el.yourId === senderId
         );
-        console.log(
-          receiverSocket,
-          senderId,
-          receiverId,
-          message,
-          partnerListening,
-          createdAt
-        );
+
         socket.emit("privateMessaging", {
           senderId,
           receiverId,
@@ -115,7 +106,6 @@ export const SocketService = () => {
         (obj) => obj.myId === myId && obj.yourId === yourId
       );
 
-      console.log(matchExists, "mexist");
       if (!matchExists) {
         privateMessagingPartner.push({ yourId, myId });
       }
@@ -123,25 +113,15 @@ export const SocketService = () => {
         el.myId === myId ? { ...el, yourId } : el
       );
 
-      console.log(privateMessagingPartner, "newprivatempadded");
       io.emit("readConfirm", privateMessagingPartner);
     });
-    //listening to public messaging event
-    // socket.on("publicEvent", ({ user, message }) => {
-    //   io.emit("publicMessaging", { sender: user, message });
-    // });
+
     socket.on("liveRooms", ({ roomsArr }) => {
-      roomsArr?.roomUsers?.forEach((el: any) => console.log("ru", el));
-      console.log("ra", roomsArr);
+      // roomsArr?.roomUsers?.forEach((el: any) => console.log("ru", el));
       rooms = [...roomsArr];
       broadcastChatRooms(io);
     });
-    // socket.on("createPrivateRoom", ({ userId, roomName }) => {
-    //   if (!checkRoomExists(userId,roomName)) {
-    //     rooms.push({ roomName: roomName, creator: userId,roomUsers:[userId] });
-    //     broadcastChatRooms(io);
-    //   }
-    // });
+
     socket.on("joinRoom", ({ roomMembers, roomId }) => {
       // socket.join(roomId);
       socket.join(roomId);
@@ -172,18 +152,7 @@ export const SocketService = () => {
         online.splice(index, 1);
         broadcastOnlineUsers(io);
       }
-      // console.log(`user ${disconnectedSocketId}  disconnected`);
-      // console.log(`After Disconnection Online Users`, online);
     });
-    console.log("onlineUsers", online);
-    console.log("rooms", rooms);
-    console.log("privateMessagingPartner", privateMessagingPartner);
   });
-  console.log("Init SocketService...");
   return io;
 };
-// export const initListners = () => {
-//   SocketService().on("connect", (socket) => {
-//     console.log(`New Socket Connected at ${socket.id}`);
-//   });
-// };

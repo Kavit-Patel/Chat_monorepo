@@ -57,9 +57,7 @@ const conversationSlice = createSlice({
       .addCase(getUserConversation.pending, (state) => {
         state.msgFetchedStatus = "pending";
       })
-      .addCase(addNewConversation.fulfilled, (state, action) => {
-        // console.log("int", action.payload);
-        // state.messages = [...state.messages, action.payload.response];
+      .addCase(addNewConversation.fulfilled, (state) => {
         state.msgCreatedStatus = "success";
       })
       .addCase(addNewConversation.rejected, (state) => {

@@ -8,7 +8,6 @@ import { writeFile } from "fs/promises";
 await ConnectDB();
 export const POST = async (req: NextRequest) => {
   try {
-    console.log("called");
     const data = req instanceof Request ? await req.formData() : undefined;
     if (!data)
       return NextResponse.json(
@@ -28,7 +27,6 @@ export const POST = async (req: NextRequest) => {
         { success: false, message: "Provide All details" },
         { status: 403 }
       );
-    console.log("first");
     if (img) {
       try {
         const byteData = await img.arrayBuffer();
@@ -49,7 +47,6 @@ export const POST = async (req: NextRequest) => {
     }
 
     const hashedPassword = await bcrypt.hash(password.toString(), 10);
-    console.log("second");
     const newUser = await userModel.create({
       name,
       email,

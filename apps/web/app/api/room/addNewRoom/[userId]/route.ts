@@ -9,7 +9,6 @@ export const POST = async (
   try {
     const { userId } = params;
     const { roomName } = await req.json();
-    console.log("rn", roomName);
     if (!userId)
       return NextResponse.json(
         { success: false, message: "Provide userId !" },

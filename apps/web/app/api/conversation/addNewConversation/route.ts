@@ -7,7 +7,6 @@ ConnectDB();
 export const POST = async (req: NextRequest) => {
   try {
     const { senderId, receiverId, message } = await req.json();
-    console.log(senderId, receiverId, message);
     if (!senderId || !receiverId || !message)
       return NextResponse.json(
         { success: false, message: "Provide all details !" },

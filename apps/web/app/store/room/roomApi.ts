@@ -17,7 +17,6 @@ export const addNewRoom = createAsyncThunk<
   { userId: string; roomName: string },
   { rejectValue: string }
 >("add/room", async ({ userId, roomName }, { rejectWithValue }) => {
-  console.log("rn", roomName);
   try {
     const req = await fetch(`/api/room/addNewRoom/${userId}`, {
       credentials: "include",
